@@ -60,6 +60,51 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to sanitize startup data - remove fields not in schema
+function sanitizeStartupData(data: any) {
+  // List of valid fields in the Prisma Startup model
+  const validFields = [
+    "id",
+    "name",
+    "sector",
+    "stage",
+    "country",
+    "description",
+    "team",
+    "metrics",
+    "score",
+    "rank",
+    "feedback",
+    "pipelineStage",
+    "aiScores",
+    "rationale",
+    "detailedMetrics",
+    "companyInfo",
+    "marketInfo",
+    "productInfo",
+    "businessModelInfo",
+    "salesInfo",
+    "teamInfo",
+    "competitiveInfo",
+    "riskInfo",
+    "opportunityInfo",
+    "initialAssessment",
+    "investmentScorecard",
+    "documents",
+    "userId",
+  ]
+
+  // Filter out any fields not in the schema
+  const sanitized: any = {}
+  for (const key of validFields) {
+    if (data[key] !== undefined) {
+      sanitized[key] = data[key]
+    }
+  }
+
+  return sanitized
+}
+
 // POST /api/startups - Create new startup(s)
 export async function POST(request: NextRequest) {
   try {
@@ -68,8 +113,11 @@ export async function POST(request: NextRequest) {
     // Check if it's a bulk insert (array) or single insert
     if (Array.isArray(body)) {
       // Bulk insert - used for CSV upload
+      // Sanitize each startup to remove unknown fields
+      const sanitizedData = body.map((startup) => sanitizeStartupData(startup))
+
       const startups = await prisma.startup.createMany({
-        data: body,
+        data: sanitizedData,
         skipDuplicates: true, // Skip if ID already exists
       })
 
@@ -83,8 +131,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Single insert
+    const sanitizedData = sanitizeStartupData(body)
     const startup = await prisma.startup.create({
-      data: body,
+      data: sanitizedData,
     })
 
     return NextResponse.json(startup, { status: 201 })
