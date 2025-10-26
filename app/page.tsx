@@ -17,37 +17,25 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    setStartups(getAllStartups())
+    async function loadStartups() {
+      const { startups } = await getAllStartups()
+      setStartups(startups)
+    }
+    loadStartups()
   }, [])
 
-  const handleUploadComplete = (uploadedStartups: Startup[]) => {
+  const handleUploadComplete = async (uploadedStartups: Startup[]) => {
     const startupsWithStage = uploadedStartups.map((s) => ({
       ...s,
       pipelineStage: "Deal Flow" as PipelineStage,
     }))
 
-    addUploadedStartups(startupsWithStage)
+    // Upload to database
+    await addUploadedStartups(startupsWithStage)
 
-    setStartups((prev) => {
-      const updated = [...prev]
-      startupsWithStage.forEach((newStartup) => {
-        const existingIndex = updated.findIndex(
-          (s) => s.name.toLowerCase().trim() === newStartup.name.toLowerCase().trim(),
-        )
-        if (existingIndex >= 0) {
-          updated[existingIndex] = {
-            ...newStartup,
-            id: updated[existingIndex].id,
-            pipelineStage: updated[existingIndex].pipelineStage,
-          }
-          console.log(`[v0] Updated existing company: ${newStartup.name}`)
-        } else {
-          updated.push(newStartup)
-          console.log(`[v0] Added new company: ${newStartup.name}`)
-        }
-      })
-      return updated
-    })
+    // Reload startups from database
+    const { startups: refreshedStartups } = await getAllStartups()
+    setStartups(refreshedStartups)
     setShowUpload(false)
   }
 

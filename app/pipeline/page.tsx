@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { KanbanBoard } from "@/components/kanban-board"
@@ -8,18 +8,26 @@ import { StartupDetailDrawer } from "@/components/startup-detail-drawer"
 import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
 import Image from "next/image"
 import type { Startup, StartupFeedback, PipelineStage } from "@/lib/types"
-import { dummyStartups } from "@/lib/dummy-data"
+import { getAllStartups } from "@/lib/startup-storage"
 import { generateComprehensiveInvestmentMemo } from "@/lib/memo-generator"
 import Link from "next/link"
 
 export default function PipelinePage() {
-  const [startups, setStartups] = useState<Startup[]>(dummyStartups)
+  const [startups, setStartups] = useState<Startup[]>([])
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [memoDialogOpen, setMemoDialogOpen] = useState(false)
   const [currentMemo, setCurrentMemo] = useState<string>("")
   const [memoCompanyName, setMemoCompanyName] = useState<string>("")
   const router = useRouter()
+
+  useEffect(() => {
+    async function loadStartups() {
+      const { startups } = await getAllStartups()
+      setStartups(startups)
+    }
+    loadStartups()
+  }, [])
 
   const handleSelectStartup = (startup: Startup) => {
     router.push(`/company/${startup.id}`)

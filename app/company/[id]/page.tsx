@@ -34,9 +34,12 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     // Load startup data on client side to avoid hydration mismatch
-    const data = getStartupById(id)
-    setStartup(data)
-    setIsLoading(false)
+    async function loadStartup() {
+      const data = await getStartupById(id)
+      setStartup(data)
+      setIsLoading(false)
+    }
+    loadStartup()
   }, [id])
 
   const [currentStage, setCurrentStage] = useState<PipelineStage>(startup?.pipelineStage || "Deal Flow")
