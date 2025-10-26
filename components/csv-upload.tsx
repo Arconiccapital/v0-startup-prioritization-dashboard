@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { Upload, FileText, AlertCircle } from "lucide-react"
+import { Upload, FileText, AlertCircle, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -100,6 +100,79 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
     }
   }
 
+  const handleDownloadTemplate = () => {
+    const headers = [
+      // Required fields
+      "Company",
+      "Description",
+      "Sector",
+      "Stage",
+      // Core company info
+      "Country",
+      "Website",
+      "LinkedIn URL",
+      "Location",
+      "Founding Year",
+      "Founders",
+      "Employee Size",
+      "Funding Raised",
+      "Area",
+      "Venture Capital Firm",
+      // Team info
+      "Key Team Members",
+      "Team Depth",
+      "Founders' Education",
+      "Founders' Prior Experience",
+      "Team & Execution Assessment",
+      // Market info
+      "Industry",
+      "Sub-Industry",
+      "Market Size",
+      "AI Disruption Propensity",
+      "Target Persona",
+      "B2B or B2C",
+      "Market & Competition Analysis",
+      // Product info
+      "Product Name",
+      "Problem Solved",
+      "Horizontal or Vertical",
+      "Moat",
+      // Business model
+      "Revenue Model",
+      "Pricing Strategy",
+      "Unit Economics",
+      // Sales info
+      "Sales Motion",
+      "Sales Cycle Length",
+      "Go-to-Market Strategy",
+      "Channels",
+      "Sales Complexity",
+      // Competitive info
+      "Competitors",
+      "Industry Multiples",
+      // Risk & opportunity
+      "Regulatory Risk",
+      "Exit Potential",
+      // Scores & analysis
+      "Investment Score Overview",
+      "Machine Learning Score",
+      "Key Strengths",
+      "Areas of Concern",
+      "Arconic LLM Rules",
+    ]
+
+    const csvContent = headers.join(",") + "\n"
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "startup_import_template.csv"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
   if (preview && suggestedMapping) {
     return (
       <ColumnMapper
@@ -120,6 +193,13 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-4">
+          <Button onClick={handleDownloadTemplate} variant="outline" className="w-full bg-transparent">
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV Template
+          </Button>
+        </div>
+
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}

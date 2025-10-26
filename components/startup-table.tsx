@@ -11,7 +11,7 @@ interface StartupTableProps {
   onSelectStartup: (startup: Startup) => void
 }
 
-type SortField = "rank" | "name" | "score"
+type SortField = "rank" | "name" | "score" | "ml_score" | "llm_score"
 type SortDirection = "asc" | "desc"
 
 export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
@@ -39,6 +39,14 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
           aVal = a.score || 0
           bVal = b.score || 0
           break
+        case "ml_score":
+          aVal = a.aiScores?.ml || 0
+          bVal = b.aiScores?.ml || 0
+          break
+        case "llm_score":
+          aVal = a.aiScores?.llm || 0
+          bVal = b.aiScores?.llm || 0
+          break
       }
 
       if (typeof aVal === "string" && typeof bVal === "string") {
@@ -62,7 +70,7 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
 
   const formatScore = (score?: number) => {
     if (score === undefined) return "-"
-    return score.toFixed(1)
+    return score.toFixed(0)
   }
 
   const getScoreColor = (score?: number) => {
@@ -90,24 +98,34 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                   Startup ↕
                 </Button>
               </TableHead>
-              <TableHead className="w-[150px]">Sector</TableHead>
-              <TableHead className="w-[120px]">Stage</TableHead>
               <TableHead className="w-[100px] text-right">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleSort("score")}
+                  onClick={() => handleSort("llm_score")}
                   className="h-7 px-2 text-xs ml-auto"
                 >
-                  Score ↕
+                  LLM ↕
                 </Button>
               </TableHead>
+              <TableHead className="w-[100px] text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort("ml_score")}
+                  className="h-7 px-2 text-xs ml-auto"
+                >
+                  ML ↕
+                </Button>
+              </TableHead>
+              <TableHead className="w-[200px]">Sector</TableHead>
+              <TableHead className="w-[120px]">Stage</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedStartups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
                   No startups found matching your filters
                 </TableCell>
               </TableRow>
@@ -132,6 +150,16 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                       <div className="text-xs text-muted-foreground line-clamp-1">{startup.description}</div>
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.llm)}`}>
+                      {formatScore(startup.aiScores?.llm)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.ml)}`}>
+                      {formatScore(startup.aiScores?.ml)}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {startup.sector}
@@ -141,11 +169,6 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                     <Badge variant="secondary" className="text-xs">
                       {startup.stage}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={`font-bold text-base ${getScoreColor(startup.score)}`}>
-                      {formatScore(startup.score)}
-                    </span>
                   </TableCell>
                 </TableRow>
               ))

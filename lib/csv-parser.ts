@@ -63,7 +63,6 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
   const headers = parseCSVLine(lines[0])
   const startups: Startup[] = []
 
-  // Create index map for quick lookup
   const indexMap: Record<string, number> = {}
   headers.forEach((header, index) => {
     indexMap[header] = index
@@ -71,56 +70,19 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
 
   console.log("[v0] Column mapping:", mapping)
   console.log("[v0] Headers:", headers)
-  console.log("[v0] Index map:", indexMap)
-  console.log("[v0] Score column:", mapping.score)
-  console.log("[v0] Score column index:", mapping.score ? indexMap[mapping.score] : "not mapped")
 
-  if (lines.length > 1) {
-    const firstRowValues = parseCSVLine(lines[1])
-    console.log("[v0] First data row has", firstRowValues.length, "columns")
-    console.log("[v0] Extracting from first row:")
-    console.log(
-      "  - Name column:",
-      mapping.name,
-      "→ index:",
-      indexMap[mapping.name!],
-      "→ value:",
-      firstRowValues[indexMap[mapping.name!]],
-    )
-    console.log(
-      "  - Sector column:",
-      mapping.sector,
-      "→ index:",
-      indexMap[mapping.sector!],
-      "→ value:",
-      firstRowValues[indexMap[mapping.sector!]],
-    )
-    console.log(
-      "  - Stage column:",
-      mapping.stage,
-      "→ index:",
-      indexMap[mapping.stage!],
-      "→ value:",
-      firstRowValues[indexMap[mapping.stage!]],
-    )
-    console.log(
-      "  - Description column:",
-      mapping.description,
-      "→ index:",
-      indexMap[mapping.description!],
-      "→ value:",
-      firstRowValues[indexMap[mapping.description!]],
-    )
-    if (mapping.score) {
-      console.log(
-        "  - Score column:",
-        mapping.score,
-        "→ index:",
-        indexMap[mapping.score],
-        "→ value:",
-        firstRowValues[indexMap[mapping.score]],
-      )
-    }
+  const getValue = (columnName: string | undefined, values: string[]): string | undefined => {
+    if (!columnName || !indexMap.hasOwnProperty(columnName)) return undefined
+    const value = values[indexMap[columnName]]
+    return value && value.trim() !== "" ? value.trim() : undefined
+  }
+
+  const getNumericValue = (columnName: string | undefined, values: string[]): number | undefined => {
+    const value = getValue(columnName, values)
+    if (!value) return undefined
+    const cleaned = value.replace(/[%,$\s]/g, "")
+    const parsed = Number.parseFloat(cleaned)
+    return isNaN(parsed) ? undefined : parsed
   }
 
   let rowsWithMissingScores = 0
@@ -129,56 +91,124 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
     const values = parseCSVLine(lines[i])
     if (values.length === 0 || values.every((v) => !v)) continue
 
-    const nameIndex = mapping.name ? indexMap[mapping.name] : -1
-    const sectorIndex = mapping.sector ? indexMap[mapping.sector] : -1
-    const stageIndex = mapping.stage ? indexMap[mapping.stage] : -1
-    const descriptionIndex = mapping.description ? indexMap[mapping.description] : -1
-    const scoreColumnIndex = mapping.score ? indexMap[mapping.score] : -1
+    const name = getValue(mapping.name, values)
+    const description = getValue(mapping.description, values)
+    const sector = getValue(mapping.sector || mapping.industry, values)
+    const stage = getValue(mapping.stage, values)
 
-    const nameValue = nameIndex >= 0 ? values[nameIndex] : ""
-    const sectorValue = sectorIndex >= 0 ? values[sectorIndex] : ""
-    const stageValue = stageIndex >= 0 ? values[stageIndex] : ""
-    const descriptionValue = descriptionIndex >= 0 ? values[descriptionIndex] : ""
-    const scoreRawValue = scoreColumnIndex >= 0 ? values[scoreColumnIndex] : undefined
-
-    console.log(`[v0] Row ${i} extraction:`, {
-      nameIndex,
-      nameValue,
-      sectorIndex,
-      sectorValue,
-      stageIndex,
-      stageValue,
-      descriptionIndex,
-      descriptionValue,
-      totalColumns: values.length,
-    })
-
-    let scoreValue = 0 // Default score
-    if (scoreRawValue !== undefined && scoreRawValue !== null && scoreRawValue !== "") {
-      const cleanedScore = String(scoreRawValue)
-        .replace(/[%,$\s]/g, "")
-        .trim()
-      const parsedScore = Number.parseFloat(cleanedScore)
-      if (!isNaN(parsedScore)) {
+    // Parse score
+    let scoreValue = 0
+    const scoreRaw = getValue(mapping.score || mapping.investmentScoreOverview, values)
+    if (scoreRaw) {
+      const parsedScore = getNumericValue(mapping.score || mapping.investmentScoreOverview, values)
+      if (parsedScore !== undefined) {
         scoreValue = parsedScore
       } else {
         rowsWithMissingScores++
-        console.warn(`[v0] Row ${i}: using default score (0) - invalid value: "${scoreRawValue}"`)
       }
     } else {
       rowsWithMissingScores++
-      console.warn(`[v0] Row ${i}: using default score (0) - no score provided`)
     }
 
     const startup: Startup = {
       id: `startup-${i}`,
-      name: nameValue || "",
-      sector: sectorValue || "",
-      stage: stageValue || "",
-      description: descriptionValue || "",
-      team: mapping.team ? values[indexMap[mapping.team]] || "" : "",
-      metrics: mapping.metrics ? values[indexMap[mapping.metrics]] || "" : "",
+      name: name || "",
+      sector: sector || "",
+      stage: stage || "",
+      pipelineStage: "Deal Flow",
+      country: getValue(mapping.country, values) || "",
+      description: description || "",
+      team: getValue(mapping.team, values) || "",
+      metrics: getValue(mapping.metrics, values) || "",
       score: scoreValue,
+
+      companyInfo: {
+        website: getValue(mapping.website, values),
+        linkedin: getValue(mapping.linkedinUrl || mapping.linkedin, values),
+        headquarters: getValue(mapping.location || mapping.headquarters, values),
+        founded: getValue(mapping.foundingYear || mapping.founded, values),
+        founders: getValue(mapping.founders, values),
+        employeeCount: getNumericValue(mapping.employeeSize || mapping.numEmployees || mapping.employeeCount, values),
+        fundingRaised: getValue(mapping.fundingRaised, values),
+        area: getValue(mapping.area, values),
+        ventureCapitalFirm: getValue(mapping.ventureCapitalFirm, values),
+        location: getValue(mapping.location, values),
+      },
+
+      marketInfo: {
+        industry: getValue(mapping.industry || mapping.sector, values),
+        subIndustry: getValue(mapping.subIndustry, values),
+        marketSize: getValue(mapping.marketSize, values),
+        aiDisruptionPropensity: getValue(mapping.aiDisruptionPropensity, values),
+        targetPersona: getValue(mapping.targetPersona, values),
+        b2bOrB2c: getValue(mapping.b2bOrB2c, values),
+        marketCompetitionAnalysis: getValue(mapping.marketCompetitionAnalysis, values),
+      },
+
+      productInfo: {
+        productName: getValue(mapping.productName, values),
+        problemSolved: getValue(mapping.problemSolved, values),
+        horizontalOrVertical: getValue(mapping.horizontalOrVertical, values),
+        moat: getValue(mapping.moat, values),
+      },
+
+      businessModelInfo: {
+        revenueModel: getValue(mapping.revenueModel, values),
+        pricingStrategy: getValue(mapping.pricingStrategy, values),
+        unitEconomics: getValue(mapping.unitEconomics, values),
+      },
+
+      salesInfo: {
+        salesMotion: getValue(mapping.salesMotion, values),
+        salesCycleLength: getValue(mapping.salesCycleLength, values),
+        gtmStrategy: getValue(mapping.gtmStrategy, values),
+        channels: getValue(mapping.channels, values),
+        salesComplexity: getValue(mapping.salesComplexity, values),
+      },
+
+      teamInfo: {
+        keyTeamMembers: getValue(mapping.keyTeamMembers, values),
+        teamDepth: getValue(mapping.teamDepth, values),
+        foundersEducation: getValue(mapping.foundersEducation, values),
+        foundersPriorExperience: getValue(mapping.foundersPriorExperience, values),
+        teamExecutionAssessment: getValue(mapping.teamExecutionAssessment, values),
+      },
+
+      competitiveInfo: {
+        competitors: getValue(mapping.competitors, values),
+        industryMultiples: getValue(mapping.industryMultiples, values),
+      },
+
+      riskInfo: {
+        regulatoryRisk: getValue(mapping.regulatoryRisk, values),
+      },
+
+      opportunityInfo: {
+        exitPotential: getValue(mapping.exitPotential, values),
+      },
+
+      aiScores: {
+        llm: 0,
+        ml: getNumericValue(mapping.machineLearningScore, values) || 0,
+        sentiment: 0,
+      },
+
+      rationale: {
+        whyInvest: [],
+        whyNot: [],
+        keyStrengths: getValue(mapping.keyStrengths, values),
+        areasOfConcern: getValue(mapping.areasOfConcern, values),
+      },
+
+      detailedMetrics: {
+        arr: getValue(mapping.arr, values),
+        growth: getValue(mapping.growth, values),
+        teamSize: getNumericValue(mapping.teamSize, values),
+        fundingStage: getValue(mapping.fundingStage, values),
+      },
+
+      arconicLlmRules: getValue(mapping.arconicLlmRules, values),
+      investmentScoreOverview: getValue(mapping.investmentScoreOverview, values),
     }
 
     // Only add if required fields are present
@@ -199,13 +229,6 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
     )
   }
 
-  if (startups.length === 0) {
-    console.error("[v0] ERROR: No startups were successfully parsed. Check that:")
-    console.error("  1. The CSV has data rows (not just headers)")
-    console.error("  2. The mapped columns exist in the CSV headers")
-    console.error("  3. The data rows have values in the mapped columns")
-  }
-
   return startups
 }
 
@@ -213,33 +236,138 @@ export function suggestMapping(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {}
   const lowerHeaders = headers.map((h) => h.toLowerCase())
 
-  // Try to auto-detect common column names
   lowerHeaders.forEach((header, index) => {
     const originalHeader = headers[index]
 
-    if (header.includes("name") || header === "startup" || header === "company") {
+    // Core fields
+    if (header === "company" || header.includes("company name")) {
       mapping.name = originalHeader
-    } else if (header.includes("sector") || header.includes("industry") || header.includes("vertical")) {
-      mapping.sector = originalHeader
-    } else if (header.includes("stage") || header.includes("round") || header.includes("funding")) {
-      mapping.stage = originalHeader
-    } else if (
-      header.includes("description") ||
-      header.includes("about") ||
-      header.includes("summary") ||
-      header.includes("overview")
-    ) {
+    } else if (header === "description" || header.includes("description")) {
       mapping.description = originalHeader
-    } else if (header.includes("team") || header.includes("founder") || header.includes("ceo")) {
-      mapping.team = originalHeader
+    } else if (header === "country") {
+      mapping.country = originalHeader
+    } else if (header === "website" || header.includes("website")) {
+      mapping.website = originalHeader
+    }
+
+    // Company info
+    else if (header === "linkedin url" || header.includes("linkedin")) {
+      mapping.linkedinUrl = originalHeader
+    } else if (header === "location" || header.includes("location")) {
+      mapping.location = originalHeader
+    } else if (header === "employee size" || header.includes("employee size")) {
+      mapping.employeeSize = originalHeader
+    } else if (header === "area") {
+      mapping.area = originalHeader
+    } else if (header === "venture capital firm" || header.includes("vc firm")) {
+      mapping.ventureCapitalFirm = originalHeader
+    } else if (header === "founding year" || header.includes("founded")) {
+      mapping.foundingYear = originalHeader
+    } else if (header === "founders" || header.includes("founder")) {
+      mapping.founders = originalHeader
+    }
+
+    // Team info
+    else if (header === "founders' education" || header.includes("founders education")) {
+      mapping.foundersEducation = originalHeader
+    } else if (header === "founders' prior experience" || header.includes("founders prior experience")) {
+      mapping.foundersPriorExperience = originalHeader
+    } else if (header === "key team members" || header.includes("key team")) {
+      mapping.keyTeamMembers = originalHeader
+    } else if (header === "team depth" || header.includes("team depth")) {
+      mapping.teamDepth = originalHeader
+    } else if (header === "# employees" || header === "num employees") {
+      mapping.numEmployees = originalHeader
+    }
+
+    // Market info
+    else if (header === "b2b or b2c" || header.includes("b2b") || header.includes("b2c")) {
+      mapping.b2bOrB2c = originalHeader
+    } else if (header === "sub-industry" || header.includes("sub industry")) {
+      mapping.subIndustry = originalHeader
+    } else if (header === "market size" || header.includes("market size")) {
+      mapping.marketSize = originalHeader
+    } else if (header === "ai disruption propensity" || header.includes("ai disruption")) {
+      mapping.aiDisruptionPropensity = originalHeader
+    } else if (header === "industry" || header.includes("industry")) {
+      mapping.industry = originalHeader
+    } else if (header === "target persona" || header.includes("target persona")) {
+      mapping.targetPersona = originalHeader
+    }
+
+    // Sales info
+    else if (header === "sales motion" || header.includes("sales motion")) {
+      mapping.salesMotion = originalHeader
+    } else if (header === "sales cycle length" || header.includes("sales cycle")) {
+      mapping.salesCycleLength = originalHeader
+    } else if (header === "go-to-market strategy" || header.includes("gtm") || header.includes("go to market")) {
+      mapping.gtmStrategy = originalHeader
+    } else if (header === "channels" || header.includes("channel")) {
+      mapping.channels = originalHeader
+    } else if (header === "sales complexity" || header.includes("sales complexity")) {
+      mapping.salesComplexity = originalHeader
+    }
+
+    // Product info
+    else if (header === "product name" || header.includes("product name")) {
+      mapping.productName = originalHeader
+    } else if (header === "problem solved" || header.includes("problem solved")) {
+      mapping.problemSolved = originalHeader
+    } else if (header === "horizontal or vertical" || header.includes("horizontal") || header.includes("vertical")) {
+      mapping.horizontalOrVertical = originalHeader
+    } else if (header === "moat" || header.includes("moat")) {
+      mapping.moat = originalHeader
+    }
+
+    // Business model
+    else if (header === "revenue model" || header.includes("revenue model")) {
+      mapping.revenueModel = originalHeader
+    } else if (header === "pricing strategy" || header.includes("pricing")) {
+      mapping.pricingStrategy = originalHeader
+    } else if (header === "unit economics" || header.includes("unit economics")) {
+      mapping.unitEconomics = originalHeader
+    }
+
+    // Competitive info
+    else if (header === "competitors" || header.includes("competitor")) {
+      mapping.competitors = originalHeader
+    } else if (header === "industry multiples" || header.includes("industry multiple")) {
+      mapping.industryMultiples = originalHeader
+    }
+
+    // Risk & opportunity
+    else if (header === "regulatory risk" || header.includes("regulatory")) {
+      mapping.regulatoryRisk = originalHeader
+    } else if (header === "exit potential" || header.includes("exit")) {
+      mapping.exitPotential = originalHeader
+    }
+
+    // AI scores & analysis
+    else if (header === "machine learning score" || header.includes("ml score")) {
+      mapping.machineLearningScore = originalHeader
+    } else if (header === "arconic llm rules" || header.includes("llm rules")) {
+      mapping.arconicLlmRules = originalHeader
+    } else if (header === "investment score overview" || header.includes("investment score")) {
+      mapping.investmentScoreOverview = originalHeader
+    } else if (header === "key strengths" || header.includes("strengths")) {
+      mapping.keyStrengths = originalHeader
+    } else if (header === "areas of concern" || header.includes("concern")) {
+      mapping.areasOfConcern = originalHeader
     } else if (
-      header.includes("metric") ||
-      header.includes("revenue") ||
-      header.includes("user") ||
-      header.includes("growth")
+      header === "market & competition analysis" ||
+      (header.includes("market") && header.includes("competition"))
     ) {
-      mapping.metrics = originalHeader
-    } else if (header.includes("score") || header.includes("rating") || header.includes("rank")) {
+      mapping.marketCompetitionAnalysis = originalHeader
+    } else if (header === "team & execution assessment" || (header.includes("team") && header.includes("execution"))) {
+      mapping.teamExecutionAssessment = originalHeader
+    }
+
+    // Legacy fields
+    else if (header.includes("sector")) {
+      mapping.sector = originalHeader
+    } else if (header.includes("stage") || header.includes("round")) {
+      mapping.stage = originalHeader
+    } else if (header.includes("score") || header.includes("rating")) {
       mapping.score = originalHeader
     }
   })

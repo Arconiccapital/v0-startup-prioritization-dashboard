@@ -86,21 +86,24 @@ export function KanbanBoard({ startups, onSelectStartup, onMoveStartup, onViewSt
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-semibold text-sm line-clamp-1">{startup.name}</h4>
-                        <span className={`text-lg font-bold ${getScoreColor(startup.score)}`}>{startup.score}</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span
+                            className={`text-sm font-semibold ${getScoreColor(startup.aiScores?.llm || startup.score)}`}
+                          >
+                            LLM: {startup.aiScores?.llm || startup.score}
+                          </span>
+                          <span
+                            className={`text-sm font-semibold ${getScoreColor(startup.aiScores?.ml || startup.score)}`}
+                          >
+                            ML: {startup.aiScores?.ml || startup.score}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="text-xs text-muted-foreground space-y-1">
                         <div className="flex items-center gap-1">
                           <span className="font-medium">Sector:</span>
                           <span className="line-clamp-1">{startup.sector}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">Stage:</span>
-                          <span>{startup.stage}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">Country:</span>
-                          <span>{startup.country}</span>
                         </div>
                       </div>
 

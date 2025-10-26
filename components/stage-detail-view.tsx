@@ -62,38 +62,40 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
   }, [stageStartups, searchQuery, sectorFilter, stageFilter, scoreRange])
 
   return (
-    <div className="h-screen flex bg-background">
-      <aside className="w-64 border-r border-border bg-card shrink-0 flex flex-col">
-        <div className="p-3 border-b border-border bg-card">
-          <Button variant="ghost" onClick={onBack} className="w-full justify-start text-sm font-medium">
-            ← Back to Pipeline
-          </Button>
-        </div>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header with Back Button */}
+      <div className="p-3 border-b border-border bg-card">
+        <Button variant="ghost" onClick={onBack} className="text-sm font-medium">
+          ← Back to Pipeline
+        </Button>
+      </div>
 
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">{stage}</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            {filteredStartups.length} of {stageStartups.length} startups
-          </p>
-        </div>
+      {/* Title Section */}
+      <div className="p-4 border-b border-border bg-card">
+        <h1 className="text-xl font-semibold">{stage}</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          {filteredStartups.length} of {stageStartups.length} startups
+        </p>
+      </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="p-4 border-b border-border bg-card">
+        <div className="flex flex-wrap items-end gap-4">
           {/* Search */}
-          <div className="space-y-1.5">
+          <div className="flex-1 min-w-[200px] space-y-1.5">
             <label className="text-xs font-medium">Search</label>
             <Input
               placeholder="Search startups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
           </div>
 
           {/* Sector Filter */}
-          <div className="space-y-1.5">
+          <div className="w-[180px] space-y-1.5">
             <label className="text-xs font-medium">Sector</label>
             <Select value={sectorFilter} onValueChange={setSectorFilter}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="All Sectors" />
               </SelectTrigger>
               <SelectContent>
@@ -108,10 +110,10 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
           </div>
 
           {/* Stage Filter */}
-          <div className="space-y-1.5">
+          <div className="w-[180px] space-y-1.5">
             <label className="text-xs font-medium">Company Stage</label>
             <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="All Stages" />
               </SelectTrigger>
               <SelectContent>
@@ -126,13 +128,10 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
           </div>
 
           {/* Score Range */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Score Range</label>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{scoreRange[0]}</span>
-              <span>-</span>
-              <span>{scoreRange[1]}</span>
-            </div>
+          <div className="w-[200px] space-y-1.5">
+            <label className="text-xs font-medium">
+              Score Range: {scoreRange[0]} - {scoreRange[1]}
+            </label>
             <Slider
               min={0}
               max={100}
@@ -147,7 +146,7 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
           <Button
             variant="outline"
             size="sm"
-            className="w-full bg-transparent text-xs"
+            className="h-9 bg-transparent text-xs"
             onClick={() => {
               setSearchQuery("")
               setSectorFilter("all")
@@ -158,19 +157,12 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
             Reset Filters
           </Button>
         </div>
-      </aside>
+      </div>
 
       {/* Main Content - Table */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-border bg-card">
-          <h1 className="text-xl font-semibold">Startups in {stage}</h1>
-          <p className="text-xs text-muted-foreground mt-1">Review and manage startups in this pipeline stage</p>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4">
-          <StartupTable startups={filteredStartups} onSelectStartup={onSelectStartup} />
-        </div>
-      </main>
+      <div className="flex-1 overflow-auto p-4">
+        <StartupTable startups={filteredStartups} onSelectStartup={onSelectStartup} />
+      </div>
     </div>
   )
 }

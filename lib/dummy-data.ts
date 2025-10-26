@@ -177,7 +177,7 @@ export const dummyStartups: Startup[] = [
     score: 79,
     rank: 5,
     feedback: [],
-    pipelineStage: "Deal Flow",
+    pipelineStage: "First Meeting",
     aiScores: {
       llm: 80,
       ml: 78,
@@ -197,6 +197,10 @@ export const dummyStartups: Startup[] = [
         "Embedded finance is a growing trend",
       ],
       whyNot: ["Highly competitive fintech landscape", "Regulatory challenges in multiple markets"],
+      keyStrengths:
+        "FinanceHub demonstrates exceptional product-market fit with 280% YoY growth and $50M in transaction volume. The founding team's deep payments expertise from Stripe and PayPal provides a significant competitive advantage. The API-first architecture enables rapid customer integration, with an average time-to-first-transaction of just 14 days. Strong unit economics (LTV:CAC of 4:1, 75% gross margin) and high customer retention (95%) indicate a sustainable, scalable business model. The embedded finance offering differentiates FinanceHub from traditional payment processors and creates additional revenue streams.",
+      areasOfConcern:
+        "The fintech payments space is highly competitive with well-funded incumbents like Stripe, PayPal, and Adyen. Regulatory compliance across multiple jurisdictions adds complexity and cost as the company expands internationally. The current burn rate of $180K/month with 18 months of runway means the company will need to raise additional capital soon. Customer concentration risk exists if a few large customers represent significant revenue. The company's success depends on continued adoption of embedded finance, which is still an emerging trend.",
     },
     detailedMetrics: {
       arr: "$1.2M",
@@ -213,6 +217,9 @@ export const dummyStartups: Startup[] = [
       fundingRaised: "$4.5M",
       founders: "David Kim (CEO, ex-Stripe), Anna Lee (CTO, ex-PayPal)",
       contactInfo: "contact@financehub.sg",
+      location: "Singapore",
+      area: "Southeast Asia",
+      ventureCapitalFirm: "Sequoia Capital Southeast Asia, Y Combinator",
     },
     marketInfo: {
       industry: "Financial Technology",
@@ -223,6 +230,9 @@ export const dummyStartups: Startup[] = [
       customerProfile: "B2B companies with $5M-$100M revenue processing recurring payments",
       aiDisruptionPropensity: "Medium - AI can optimize fraud detection and underwriting",
       marketFragmentation: "Highly fragmented with regional players and legacy systems",
+      b2bOrB2c: "B2B",
+      marketCompetitionAnalysis:
+        "The B2B payments market is valued at $2.1T globally and growing at 15% CAGR, driven by digitization of business payments and demand for embedded finance solutions. The market is highly fragmented with regional players and legacy systems, creating opportunities for modern API-first platforms. Key competitors include Stripe (dominant in online payments), Bill.com (focused on AP/AR), and regional players like Razorpay (India) and Airwallex (Asia-Pacific). FinanceHub differentiates through its embedded finance offering, allowing B2B platforms to offer financing to their buyers. The competitive moat strengthens with network effects as more buyers and sellers transact on the platform. Regulatory barriers to entry are high, favoring established players with compliance infrastructure.",
     },
     productInfo: {
       productName: "FinanceHub Platform",
@@ -261,6 +271,11 @@ export const dummyStartups: Startup[] = [
         "David Kim (CEO, 8 years at Stripe), Anna Lee (CTO, 6 years at PayPal), Sarah Tan (Head of Sales, ex-Square)",
       boardMembers: "David Kim (CEO), Anna Lee (CTO), Michael Chen (Investor, Sequoia), Lisa Wong (Independent)",
       advisors: "Patrick Collison (Stripe Co-founder), John Doerr (Kleiner Perkins), Amy Chang (ex-Google Payments)",
+      foundersEducation: "David Kim: Stanford CS, MBA from Harvard; Anna Lee: MIT CS, MS from Carnegie Mellon",
+      foundersPriorExperience:
+        "David Kim: 8 years at Stripe (Payments Infrastructure Lead), 2 years at Square. Anna Lee: 6 years at PayPal (Engineering Manager), 3 years at Braintree",
+      teamExecutionAssessment:
+        "The founding team demonstrates exceptional execution capability with complementary skills. David Kim's 8 years at Stripe provides deep expertise in payment infrastructure, regulatory compliance, and scaling fintech products. Anna Lee's 6 years at PayPal brings strong technical leadership and experience building reliable payment systems. The team has successfully launched the product, onboarded 85 customers, and achieved $50M in transaction volume within 18 months - demonstrating strong product-market fit and execution velocity. The advisory board includes Patrick Collison (Stripe co-founder), providing strategic guidance and credibility. Key execution risks include the need to scale the team while maintaining product quality, and managing regulatory compliance as the company expands to new markets. The team's prior experience at leading fintech companies mitigates these risks significantly.",
     },
     financialInfo: {
       capitalRaised: "$4.5M Seed round",
@@ -308,7 +323,7 @@ export const dummyStartups: Startup[] = [
     score: 76,
     rank: 6,
     feedback: [],
-    pipelineStage: "Deal Flow",
+    pipelineStage: "First Meeting",
     aiScores: {
       llm: 77,
       ml: 75,
@@ -322,12 +337,110 @@ export const dummyStartups: Startup[] = [
         "CEO from leading security company",
       ],
       whyNot: ["Crowded cybersecurity market", "Long enterprise sales cycles"],
+      keyStrengths:
+        "CloudSecure addresses the critical need for zero-trust security in cloud environments with a comprehensive platform that integrates seamlessly with major cloud providers (AWS, Azure, GCP). The founding team's deep cybersecurity expertise from Palo Alto Networks and Cisco provides strong technical credibility and industry connections. With 65 enterprise customers including Fortune 500 companies, CloudSecure has demonstrated strong product-market fit in a mission-critical category. The 200% YoY growth and $2M ARR show strong market demand. Enterprise customers have high switching costs and long-term contracts, providing predictable recurring revenue and strong retention (92% net revenue retention).",
+      areasOfConcern:
+        "The cybersecurity market is highly competitive with well-funded incumbents like Palo Alto Networks, CrowdStrike, and Zscaler. Enterprise sales cycles are long (6-12 months), requiring significant sales and marketing investment to scale. The company's current burn rate of $250K/month with 16 months of runway means they'll need to raise additional capital soon. Customer concentration risk exists with top 5 customers representing 40% of revenue. The zero-trust security category is becoming crowded with many startups and incumbents pivoting to this approach. Technical complexity of the product requires significant customer education and implementation support.",
     },
     detailedMetrics: {
       arr: "$2M",
       growth: "200%",
       teamSize: 18,
       fundingStage: "Series A",
+    },
+    companyInfo: {
+      founded: "2021",
+      headquarters: "Palo Alto, CA",
+      website: "https://cloudsecure.io",
+      linkedin: "https://linkedin.com/company/cloudsecure",
+      employeeCount: 28,
+      fundingRaised: "$12M",
+      founders: "Alex Turner (CEO, ex-Palo Alto Networks), Sarah Chen (CTO, ex-Cisco)",
+      contactInfo: "contact@cloudsecure.io",
+      location: "Palo Alto, California",
+      area: "North America",
+      ventureCapitalFirm: "Andreessen Horowitz, Sequoia Capital",
+    },
+    marketInfo: {
+      industry: "Cybersecurity",
+      subIndustry: "Cloud Security & Zero-Trust",
+      marketSize: "$75B global cloud security market, growing at 18% CAGR",
+      segment: "Enterprise Cloud Security",
+      targetPersona: "CISOs and Security Directors at mid-market and enterprise companies",
+      customerProfile: "Companies with 500+ employees using multi-cloud infrastructure",
+      aiDisruptionPropensity: "Low - Security requires human expertise and judgment",
+      marketFragmentation: "Moderately fragmented with several large players and many niche solutions",
+      b2bOrB2c: "B2B",
+      marketCompetitionAnalysis:
+        "The cloud security market is valued at $75B globally and growing at 18% CAGR, driven by cloud adoption and increasing cyber threats. Zero-trust architecture is becoming the standard security model, with Gartner predicting 60% of enterprises will adopt zero-trust by 2025. Key competitors include Palo Alto Networks (Prisma Cloud), Zscaler (cloud-native security), CrowdStrike (endpoint + cloud), and Wiz (cloud security posture). CloudSecure differentiates through its unified platform approach that covers identity, network, and workload security in a single solution. The competitive moat strengthens with customer data and threat intelligence that improves over time. High switching costs and compliance requirements create customer stickiness once deployed.",
+    },
+    productInfo: {
+      productName: "CloudSecure Platform",
+      problemSolved:
+        "Enterprises struggle to secure multi-cloud environments with fragmented tools and lack of visibility across cloud infrastructure",
+      horizontalOrVertical: "Horizontal - Applicable across all industries using cloud infrastructure",
+      moat: "Proprietary threat intelligence database, deep cloud provider integrations, network effects from shared threat data",
+    },
+    businessModelInfo: {
+      modelType: "B2B SaaS with usage-based pricing",
+      revenueModel: "Annual contracts with per-user and per-workload pricing tiers",
+      pricingStrategy: "Tiered pricing: Starter ($50K/year), Professional ($150K/year), Enterprise (custom)",
+      unitEconomics: "LTV:CAC ratio of 3.5:1, payback period of 14 months, gross margin 78%",
+    },
+    salesInfo: {
+      salesMotion: "Enterprise sales with technical proof-of-concept",
+      salesCycleLength: "6-12 months for enterprise deals",
+      numberOfCustomers: "65 enterprise customers",
+      customerValidation: "Strong - 92% net revenue retention, NPS of 62",
+      gtmStrategy: "Direct enterprise sales, channel partnerships with cloud providers and MSSPs",
+      channels: "Direct sales team, AWS/Azure/GCP marketplaces, security resellers",
+      salesComplexity: "High - Requires technical evaluation, security team buy-in, and compliance review",
+    },
+    teamInfo: {
+      teamDepth: "Strong security team with 18 engineers, 6 in sales, 3 in customer success, 1 in marketing",
+      keyTeamMembers:
+        "Alex Turner (CEO, 10 years at Palo Alto Networks), Sarah Chen (CTO, 8 years at Cisco), Mike Johnson (VP Sales, ex-CrowdStrike)",
+      boardMembers: "Alex Turner (CEO), Sarah Chen (CTO), Marc Andreessen (a16z), Doug Leone (Sequoia)",
+      advisors: "Nikesh Arora (Palo Alto Networks CEO), George Kurtz (CrowdStrike CEO)",
+      foundersEducation: "Alex Turner: Stanford CS, MBA from Wharton; Sarah Chen: MIT CS, PhD from Berkeley",
+      foundersPriorExperience:
+        "Alex Turner: 10 years at Palo Alto Networks (Product Lead for Prisma Cloud), 3 years at Symantec. Sarah Chen: 8 years at Cisco (Security Architect), 4 years at FireEye",
+      teamExecutionAssessment:
+        "The founding team brings exceptional cybersecurity expertise with 18+ years of combined experience at leading security companies. Alex Turner led the Prisma Cloud product at Palo Alto Networks, giving him deep knowledge of cloud security and enterprise sales. Sarah Chen's 8 years at Cisco as a Security Architect provides strong technical leadership and understanding of enterprise security requirements. The team has successfully built and launched the platform, onboarded 65 enterprise customers, and achieved $2M ARR within 3 years. The advisory board includes CEOs of Palo Alto Networks and CrowdStrike, providing strategic guidance and industry credibility. Key execution risks include scaling the sales team while maintaining deal quality, and managing product complexity as new features are added. The team's prior experience at leading security companies significantly mitigates these risks.",
+    },
+    financialInfo: {
+      capitalRaised: "$12M Series A",
+      leadInvestors: "Andreessen Horowitz, Sequoia Capital",
+      estimatedRevenue: "$2M ARR (as of Q4 2024)",
+      burnRate: "$250K/month",
+      runway: "16 months",
+      capTableSummary: "Founders 55%, a16z 25%, Sequoia 15%, Angels 5%",
+    },
+    competitiveInfo: {
+      competitors: "Palo Alto Networks (Prisma Cloud), Zscaler, CrowdStrike, Wiz, Lacework",
+      comparableCompanies: "Wiz (cloud security), Lacework (cloud security), Orca Security (agentless security)",
+      industryMultiples: "15-20x ARR for high-growth cybersecurity companies",
+    },
+    customerMetrics: {
+      customerRatings: "4.6/5 on Gartner Peer Insights, 4.5/5 on G2",
+      engagement: "92% net revenue retention, average customer uses 85% of platform features",
+      feedback: "Customers praise comprehensive coverage, ease of deployment, and responsive support team",
+    },
+    riskInfo: {
+      regulatoryRisk:
+        "Low - Cybersecurity products help customers meet compliance requirements (SOC 2, ISO 27001, GDPR)",
+      ipPatents: "3 patents pending on zero-trust architecture and threat detection algorithms",
+    },
+    opportunityInfo: {
+      exitPotential:
+        "High - Strategic acquisition target for Palo Alto Networks, Cisco, Microsoft, or Google; IPO potential at scale",
+      milestones: "Reached $2M ARR in 3 years, onboarded 5 Fortune 500 customers, expanded to EMEA region",
+      notablePartners: "AWS (Technology Partner), Microsoft Azure (Security Partner), Google Cloud (Partner)",
+    },
+    valuationInfo: {
+      impliedValuationMultiples: "15x ARR based on $12M raise at $30M post-money valuation",
+      comparableMultiple: "15-20x ARR for similar-stage cybersecurity companies",
+      revenueEstimate: "$6M ARR projected for end of 2025 (based on current growth rate)",
     },
   },
   {
@@ -405,12 +518,12 @@ export const dummyStartups: Startup[] = [
     stage: "Seed",
     country: "Australia",
     description: "AI-powered property valuation and investment analysis platform",
-    team: "CEO: Rachel Brown, 8 team members including 3 data scientists",
+    team: "CEO: Rachel Brown, CTO: Dr. James Wilson, 8 team members including 3 data scientists",
     metrics: "ARR: $500K, Growth: 160% YoY, Properties analyzed: 10K+",
     score: 67,
     rank: 9,
     feedback: [],
-    pipelineStage: "Deal Flow",
+    pipelineStage: "First Meeting",
     aiScores: {
       llm: 68,
       ml: 66,
@@ -424,12 +537,117 @@ export const dummyStartups: Startup[] = [
         "Data moat grows with usage",
       ],
       whyNot: ["Real estate market can be cyclical", "Requires significant data to be accurate"],
+      keyStrengths:
+        "PropTech Innovations has built a proprietary AI valuation model trained on 10K+ property transactions, providing more accurate valuations than traditional methods (95% accuracy vs 85% industry average). The platform addresses a critical pain point for real estate investors who struggle with time-consuming manual analysis and inconsistent valuation methods. With 160% YoY growth and $500K ARR, the company demonstrates strong product-market fit in the Australian market. The data moat strengthens with each property analyzed, creating a competitive advantage that's difficult to replicate. The founding team includes experienced data scientists and real estate professionals, combining technical expertise with domain knowledge.",
+      areasOfConcern:
+        "The real estate market is cyclical and sensitive to interest rates and economic conditions, which could impact demand for the platform. The company is currently focused only on the Australian market, limiting near-term growth potential until international expansion. Accuracy of AI valuations depends on data quality and market conditions, and any high-profile valuation errors could damage reputation. Competition from established real estate data providers like CoreLogic and REA Group poses a threat. The current burn rate of $80K/month with 15 months of runway means the company will need to raise additional capital soon. Customer acquisition in real estate can be relationship-driven, requiring significant time to build trust and credibility.",
     },
     detailedMetrics: {
       arr: "$500K",
       growth: "160%",
       teamSize: 8,
       fundingStage: "Seed",
+    },
+    companyInfo: {
+      founded: "2022",
+      headquarters: "Sydney, Australia",
+      website: "https://proptechinnovations.com.au",
+      linkedin: "https://linkedin.com/company/proptech-innovations",
+      employeeCount: 12,
+      fundingRaised: "$2.5M",
+      founders: "Rachel Brown (CEO), Dr. James Wilson (Chief Data Scientist)",
+      contactInfo: "contact@proptechinnovations.com.au",
+      location: "Sydney, New South Wales",
+      area: "Australia & New Zealand",
+      ventureCapitalFirm: "Blackbird Ventures, Square Peg Capital",
+    },
+    marketInfo: {
+      industry: "Real Estate Technology",
+      subIndustry: "Property Valuation & Investment Analytics",
+      marketSize: "$12B Australian property technology market",
+      segment: "Real Estate Investors & Property Professionals",
+      targetPersona: "Real estate investors, property developers, and real estate agents",
+      customerProfile: "Individual investors and small property investment firms managing 5-50 properties",
+      aiDisruptionPropensity: "High - AI can significantly improve valuation accuracy and speed",
+      marketFragmentation: "Moderately fragmented with established players and emerging startups",
+      b2bOrB2c: "B2B",
+      marketCompetitionAnalysis:
+        "The Australian property technology market is valued at $12B and growing at 12% CAGR, driven by digitization of real estate transactions and demand for data-driven investment decisions. Key competitors include CoreLogic (dominant in property data), REA Group (property listings and data), and Domain (property portal with analytics). PropTech Innovations differentiates through its AI-powered valuation model that provides more accurate and faster valuations than traditional methods. The competitive moat strengthens with proprietary data from 10K+ analyzed properties and machine learning models that improve over time. Regulatory requirements for property valuations create barriers to entry, favoring established players with credibility and track records.",
+    },
+    productInfo: {
+      productName: "PropTech Valuation Platform",
+      problemSolved:
+        "Real estate investors spend hours manually analyzing properties with inconsistent valuation methods and limited data insights",
+      horizontalOrVertical: "Vertical - Focused specifically on real estate investment analysis",
+      moat: "Proprietary AI valuation model trained on 10K+ properties, exclusive data partnerships, network effects from user-generated data",
+    },
+    businessModelInfo: {
+      modelType: "B2B SaaS with tiered subscriptions",
+      revenueModel: "Monthly subscription ($99-$499/month) + per-valuation fees for high-volume users",
+      pricingStrategy: "Freemium model with 5 free valuations, then tiered pricing based on usage volume",
+      unitEconomics: "LTV:CAC ratio of 3:1, payback period of 12 months, gross margin 82%",
+    },
+    salesInfo: {
+      salesMotion: "Product-led growth with self-service signup and sales-assisted for enterprise",
+      salesCycleLength: "7-14 days for individual investors, 30-60 days for property firms",
+      numberOfCustomers: "450 active subscribers",
+      customerValidation: "Strong - 88% customer retention, NPS of 55",
+      gtmStrategy:
+        "Content marketing targeting real estate investors, partnerships with real estate agencies, SEO for property valuation keywords",
+      channels: "Direct website signup, real estate agency partnerships, property investment forums and communities",
+      salesComplexity: "Low to Medium - Self-service for individuals, requires demo and training for firms",
+    },
+    teamInfo: {
+      teamDepth: "Strong data science team with 3 PhDs, 2 in product, 2 in sales, 1 in marketing",
+      keyTeamMembers:
+        "Rachel Brown (CEO, 12 years in real estate), Dr. James Wilson (Chief Data Scientist, PhD in ML), Sarah Lee (Head of Product, ex-REA Group)",
+      boardMembers:
+        "Rachel Brown (CEO), Dr. James Wilson (CDS), Rick Baker (Blackbird Ventures), Niki Scevak (Square Peg)",
+      advisors:
+        "Simon Baker (ex-CEO of REA Group), Prof. Michael Chen (UNSW Real Estate), Lisa Wong (Property Investment Expert)",
+      foundersEducation:
+        "Rachel Brown: MBA from Melbourne Business School; Dr. James Wilson: PhD in Machine Learning from Stanford, BS from MIT",
+      foundersPriorExperience:
+        "Rachel Brown: 12 years in real estate (8 years as property investor, 4 years at major real estate firm). Dr. James Wilson: 5 years at Google (ML Research), 3 years at Zillow (Valuation Models)",
+      teamExecutionAssessment:
+        "The founding team combines deep real estate domain expertise with cutting-edge AI/ML capabilities. Rachel Brown's 12 years in real estate provides credibility and understanding of investor pain points. Dr. James Wilson's PhD in ML from Stanford and 5 years at Google brings world-class technical expertise in building accurate prediction models. The team has successfully built and launched the platform, analyzed 10K+ properties, and onboarded 450 subscribers within 2 years - demonstrating strong execution velocity. The advisory board includes the ex-CEO of REA Group (Australia's leading property portal), providing strategic guidance and industry connections. Key execution risks include scaling the data science team while maintaining model accuracy, and expanding beyond Australia to new markets with different property data. The team's complementary skills and prior experience significantly mitigate these risks.",
+    },
+    financialInfo: {
+      capitalRaised: "$2.5M Seed round",
+      leadInvestors: "Blackbird Ventures, Square Peg Capital",
+      estimatedRevenue: "$500K ARR (as of Q4 2024)",
+      burnRate: "$80K/month",
+      runway: "15 months",
+      capTableSummary: "Founders 70%, Blackbird 18%, Square Peg 10%, Angels 2%",
+    },
+    competitiveInfo: {
+      competitors: "CoreLogic, REA Group, Domain, Pricefinder, RP Data",
+      comparableCompanies: "Zillow (US property data), Redfin (US real estate tech), Opendoor (iBuying)",
+      industryMultiples: "8-12x ARR for high-growth proptech companies",
+    },
+    customerMetrics: {
+      customerRatings: "4.5/5 on Product Hunt, 4.3/5 on Capterra",
+      engagement: "88% monthly active users, average 12 property valuations per user per month",
+      feedback: "Users praise valuation accuracy, speed of analysis, and comprehensive property insights",
+    },
+    riskInfo: {
+      regulatoryRisk:
+        "Medium - Property valuations may require licensing in some jurisdictions; data privacy regulations apply",
+      ipPatents:
+        "Proprietary AI valuation algorithm (patent pending), property data aggregation methods (trade secret)",
+    },
+    opportunityInfo: {
+      exitPotential:
+        "Medium to High - Strategic acquisition target for REA Group, Domain, or CoreLogic; potential for regional expansion to Asia-Pacific",
+      milestones:
+        "Analyzed 10K+ properties, reached $500K ARR in 2 years, achieved 95% valuation accuracy, expanded to Melbourne and Brisbane markets",
+      notablePartners:
+        "Ray White (real estate agency partnership), LJ Hooker (data partnership), ANZ Bank (mortgage referral partner)",
+    },
+    valuationInfo: {
+      impliedValuationMultiples: "10x ARR based on $2.5M raise at $5M post-money valuation",
+      comparableMultiple: "8-12x ARR for similar-stage proptech companies",
+      revenueEstimate: "$1.3M ARR projected for end of 2025 (based on current growth rate)",
     },
   },
   {
@@ -465,6 +683,14 @@ export const dummyStartups: Startup[] = [
       teamSize: 16,
       fundingStage: "Series A",
     },
+    companyInfo: {
+      founded: "2021",
+      headquarters: "San Francisco, CA",
+      website: "https://mobilitynext.com",
+      linkedin: "https://linkedin.com/company/mobilitynext",
+      employeeCount: 20,
+      fundingRaised: "$7.5M",
+    },
   },
   {
     id: "11",
@@ -499,6 +725,14 @@ export const dummyStartups: Startup[] = [
       teamSize: 9,
       fundingStage: "Seed",
     },
+    companyInfo: {
+      founded: "2022",
+      headquarters: "Bangalore, India",
+      website: "https://agritechsolutions.com",
+      linkedin: "https://linkedin.com/company/agritechsolutions",
+      employeeCount: 15,
+      fundingRaised: "$3.0M",
+    },
   },
   {
     id: "12",
@@ -532,6 +766,14 @@ export const dummyStartups: Startup[] = [
       growth: "175%",
       teamSize: 14,
       fundingStage: "Series A",
+    },
+    companyInfo: {
+      founded: "2022",
+      headquarters: "Los Angeles, CA",
+      website: "https://mediastreamp.io",
+      linkedin: "https://linkedin.com/company/mediastreamp",
+      employeeCount: 25,
+      fundingRaised: "$10M",
     },
   },
 ]

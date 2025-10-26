@@ -1,21 +1,28 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { KanbanBoard } from "@/components/kanban-board"
 import { StartupDetailDrawer } from "@/components/startup-detail-drawer"
+import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
+import Image from "next/image"
 import type { Startup, StartupFeedback, PipelineStage } from "@/lib/types"
 import { dummyStartups } from "@/lib/dummy-data"
+import { generateComprehensiveInvestmentMemo } from "@/lib/memo-generator"
 import Link from "next/link"
 
 export default function PipelinePage() {
   const [startups, setStartups] = useState<Startup[]>(dummyStartups)
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [memoDialogOpen, setMemoDialogOpen] = useState(false)
+  const [currentMemo, setCurrentMemo] = useState<string>("")
+  const [memoCompanyName, setMemoCompanyName] = useState<string>("")
+  const router = useRouter()
 
   const handleSelectStartup = (startup: Startup) => {
-    setSelectedStartup(startup)
-    setDrawerOpen(true)
+    router.push(`/company/${startup.id}`)
   }
 
   const handleMoveStartup = (startupId: string, newStage: PipelineStage) => {
@@ -107,68 +114,18 @@ export default function PipelinePage() {
     const startup = startups.find((s) => s.id === startupId)
     if (!startup) return
 
-    // Generate investment memo based on all available data
-    const memo = `
-INVESTMENT MEMO: ${startup.name}
-
-EXECUTIVE SUMMARY
-${startup.description}
-
-COMPANY OVERVIEW
-Sector: ${startup.sector}
-Stage: ${startup.stage}
-Country: ${startup.country}
-Team: ${startup.team}
-
-KEY METRICS
-${startup.metrics}
-${startup.detailedMetrics ? `ARR: ${startup.detailedMetrics.arr}, Growth: ${startup.detailedMetrics.growth}, Team Size: ${startup.detailedMetrics.teamSize}` : ""}
-
-AI ANALYSIS SCORES
-Overall Score: ${startup.score}/100
-LLM Score: ${startup.aiScores?.llm || "N/A"}
-ML Score: ${startup.aiScores?.ml || "N/A"}
-Sentiment Score: ${startup.aiScores?.sentiment || "N/A"}
-
-INVESTMENT RATIONALE
-Why Invest:
-${startup.rationale?.whyInvest.map((reason, i) => `${i + 1}. ${reason}`).join("\n") || "N/A"}
-
-Risks & Concerns:
-${startup.rationale?.whyNot.map((reason, i) => `${i + 1}. ${reason}`).join("\n") || "N/A"}
-
-DUE DILIGENCE SCORECARD
-${
-  startup.feedback && startup.feedback.length > 0
-    ? `
-Latest Evaluation:
-- Team Quality: ${startup.feedback[startup.feedback.length - 1].scores.team}/10
-- Market Opportunity: ${startup.feedback[startup.feedback.length - 1].scores.market}/10
-- Product/Technology: ${startup.feedback[startup.feedback.length - 1].scores.product}/10
-- Business Model: ${startup.feedback[startup.feedback.length - 1].scores.businessModel}/10
-- Traction/Metrics: ${startup.feedback[startup.feedback.length - 1].scores.traction}/10
-- Investment Readiness: ${startup.feedback[startup.feedback.length - 1].scores.investmentReadiness}/10
-
-Notes: ${startup.feedback[startup.feedback.length - 1].notes}
-`
-    : "No scorecard evaluations yet."
-}
-
-DOCUMENTS REVIEWED
-${startup.documents?.transcript ? "✓ Meeting Transcript" : "○ Meeting Transcript"}
-${startup.documents?.pitchDeck ? "✓ Pitch Deck" : "○ Pitch Deck"}
-
-RECOMMENDATION
-Based on the comprehensive analysis above, this investment opportunity scores ${startup.score}/100 and is currently in the "${startup.pipelineStage}" stage of our pipeline.
-
-Generated: ${new Date().toLocaleDateString()}
-    `.trim()
+    const memo = generateComprehensiveInvestmentMemo(startup)
 
     setStartups((prev) => prev.map((s) => (s.id === startupId ? { ...s, investmentMemo: memo } : s)))
 
     if (selectedStartup?.id === startupId) {
       setSelectedStartup((prev) => (prev ? { ...prev, investmentMemo: memo } : null))
     }
+
+    // Show the memo in a dialog
+    setCurrentMemo(memo)
+    setMemoCompanyName(startup.name)
+    setMemoDialogOpen(true)
   }
 
   return (
@@ -177,8 +134,11 @@ Generated: ${new Date().toLocaleDateString()}
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">Investment Pipeline</h1>
-              <p className="text-sm text-muted-foreground mt-1">Track startups through due diligence stages</p>
+              <div className="flex items-end gap-4 mb-2">
+                <Image src="/arconic-logo.png" alt="Arconic" width={140} height={35} className="h-9 w-auto" />
+                <h1 className="text-3xl font-semibold text-foreground">Lighthouse AI</h1>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">AI led workflow to prioritise startup research</p>
             </div>
             <div className="flex gap-2">
               <Link href="/">
@@ -200,6 +160,13 @@ Generated: ${new Date().toLocaleDateString()}
         onAddFeedback={handleAddFeedback}
         onUploadDocument={handleUploadDocument}
         onGenerateMemo={handleGenerateMemo}
+      />
+
+      <InvestmentMemoDialog
+        open={memoDialogOpen}
+        onOpenChange={setMemoDialogOpen}
+        companyName={memoCompanyName}
+        memoContent={currentMemo}
       />
     </div>
   )
