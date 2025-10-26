@@ -1,0 +1,111 @@
+// Prisma schema for Startup Prioritization Dashboard
+// This schema is designed for Vercel Postgres
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model Startup {
+  id              String   @id @default(uuid())
+  name            String
+  sector          String
+  stage           String?
+  country         String
+  description     String?
+  team            String?
+  metrics         String?
+  score           Float    @default(0)
+  rank            Int      @default(0)
+  feedback        Json     @default("[]") // Array of feedback items
+  pipelineStage   String   @default("Deal Flow")
+
+  // AI Scores (stored as JSON for flexibility)
+  aiScores        Json? // {llm, ml, sentiment, llmAnalysis, mlAnalysis, sentimentAnalysis}
+
+  // Rationale (stored as JSON)
+  rationale       Json? // {whyInvest: string[], whyNot: string[], keyStrengths, areasOfConcern}
+
+  // Detailed Metrics (stored as JSON)
+  detailedMetrics Json? // {arr, growth, teamSize, fundingStage}
+
+  // Company Info (stored as JSON)
+  companyInfo     Json? // {founded, headquarters, website, linkedin, employeeCount, fundingRaised, location, area, ventureCapitalFirm, founders}
+
+  // Market Info (stored as JSON)
+  marketInfo      Json? // {b2bOrB2c, subIndustry, marketSize, aiDisruptionPropensity, industry, targetPersona, marketCompetitionAnalysis}
+
+  // Product Info (stored as JSON)
+  productInfo     Json? // {productName, horizontalOrVertical, problemSolved, moat, productStage, technologyStack, intellectualProperty}
+
+  // Business Model Info (stored as JSON)
+  businessModelInfo Json? // {revenueModel, pricingStrategy, unitEconomics, customerAcquisitionCost, lifetimeValue}
+
+  // Sales Info (stored as JSON)
+  salesInfo       Json? // {salesMotion, salesCycleLength, salesComplexity, gtmStrategy, channels, currentCustomers, customerRetention}
+
+  // Team Info (stored as JSON)
+  teamInfo        Json? // {foundersEducation, foundersPriorExperience, keyTeamMembers, teamDepth, teamExecutionAssessment}
+
+  // Competitive Info (stored as JSON)
+  competitiveInfo Json? // {competitors, industryMultiples}
+
+  // Risk Info (stored as JSON)
+  riskInfo        Json? // {regulatoryRisk, marketRisk, executionRisk}
+
+  // Opportunity Info (stored as JSON)
+  opportunityInfo Json? // {exitPotential}
+
+  // Threshold Issues (separate table for better querying)
+  thresholdIssues ThresholdIssue[]
+
+  // Initial Assessment (stored as JSON)
+  initialAssessment Json? // {marketOpportunity, teamQuality, productInnovation, businessModel, competitivePosition, commentary}
+
+  // Investment Scorecard (stored as JSON)
+  investmentScorecard Json? // {criteria, totalScore, lastUpdated}
+
+  // Documents (stored as JSON)
+  documents       Json? // {transcript, pitchDeck}
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Optional: User ID for future multi-tenancy
+  userId          String?
+
+  // Indexes for performance
+  @@index([rank])
+  @@index([sector])
+  @@index([pipelineStage])
+  @@index([score])
+  @@index([userId])
+  @@index([sector, rank])
+  @@index([pipelineStage, rank])
+}
+
+model ThresholdIssue {
+  id              String   @id @default(uuid())
+  startupId       String
+  startup         Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  category        String // "Market Risk" | "Team Risk" | etc.
+  issue           String
+  riskRating      String // "High" | "Medium" | "Low"
+  mitigation      String
+  status          String   @default("Open") // "Open" | "In Progress" | "Resolved" | "Accepted Risk"
+  identifiedDate  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([startupId])
+  @@index([riskRating])
+  @@index([status])
+}

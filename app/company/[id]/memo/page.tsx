@@ -3,9 +3,10 @@
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Download, Loader2 } from "lucide-react"
-import { getAllStartups } from "@/lib/startup-storage"
+import { getStartupById } from "@/lib/startup-storage"
 import { useState, useEffect } from "react"
 import { generateMemoSections } from "@/lib/investment-memo-generator"
+import type { Startup } from "@/lib/types"
 
 interface MemoSection {
   id: string
@@ -20,7 +21,18 @@ export default function InvestmentMemoPage() {
   const router = useRouter()
   const companyId = params.id as string
 
-  const startup = getAllStartups().find((s) => s.id === companyId)
+  const [startup, setStartup] = useState<Startup | undefined>(undefined)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch startup data on mount
+  useEffect(() => {
+    async function loadStartup() {
+      const data = await getStartupById(companyId)
+      setStartup(data)
+      setLoading(false)
+    }
+    loadStartup()
+  }, [companyId])
 
   const [sections, setSections] = useState<MemoSection[]>([
     { id: "executive", title: "Executive Summary", content: "", isGenerating: true },
@@ -39,7 +51,7 @@ export default function InvestmentMemoPage() {
   const [generalError, setGeneralError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!startup) return
+    if (!startup || loading) return
 
     const generateAIMemo = async () => {
       setIsGenerating(true)
@@ -94,7 +106,20 @@ export default function InvestmentMemoPage() {
     }
 
     generateAIMemo()
-  }, [startup])
+  }, [startup, loading])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mt-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading company data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!startup) {
     return (

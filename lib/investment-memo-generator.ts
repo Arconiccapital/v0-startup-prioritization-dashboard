@@ -1,5 +1,10 @@
 import type { Startup } from "./types"
 import { generateText } from "ai"
+import { createOpenAI } from "@ai-sdk/openai"
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+})
 
 function prepareCompanyData(startup: Startup) {
   return {
@@ -247,7 +252,7 @@ Data: ${JSON.stringify(companyData, null, 2)}`,
       console.log(`[v0] Generating section: ${sectionId}`)
 
       const { text } = await generateText({
-        model: "openai/gpt-4o",
+        model: openai("gpt-4o-mini"),
         prompt: `You are a senior venture capital analyst. ${prompt}
 
 IMPORTANT: Write in plain text without any markdown formatting. Do not use asterisks for bold (**text**), do not use hashes for headers (## Header), do not use dashes or asterisks for bullet points. Write in clear, professional prose with proper paragraphs and natural formatting. Use line breaks to separate ideas but avoid markdown syntax entirely.

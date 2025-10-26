@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,16 +20,24 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 
-export default function CompanyPage({ params }: { params: { id: string } }) {
+export default function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const { id } = params
+  const { id } = use(params)
   const [memoDialogOpen, setMemoDialogOpen] = useState(false)
   const [currentMemo, setCurrentMemo] = useState<string>("")
   const [memoCompanyName, setMemoCompanyName] = useState<string>("")
 
   const [scorecardScores, setScorecardScores] = useState<Record<string, number>>({})
 
-  const startup = getStartupById(id)
+  const [startup, setStartup] = useState<ReturnType<typeof getStartupById>>(undefined)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Load startup data on client side to avoid hydration mismatch
+    const data = getStartupById(id)
+    setStartup(data)
+    setIsLoading(false)
+  }, [id])
 
   const [currentStage, setCurrentStage] = useState<PipelineStage>(startup?.pipelineStage || "Deal Flow")
 
@@ -72,6 +80,16 @@ export default function CompanyPage({ params }: { params: { id: string } }) {
       setThresholdIssues(startup.thresholdIssues)
     }
   }, [startup]) // Re-run effect if startup changes
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
 
   if (!startup) {
     return (
