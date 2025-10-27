@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("[API] Signup error:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json(
-      { error: "Failed to create user. Please try again." },
+      { error: `Failed to create user: ${errorMessage}` },
       { status: 500 }
     )
   }
