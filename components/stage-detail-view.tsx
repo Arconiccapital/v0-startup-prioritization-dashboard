@@ -19,7 +19,6 @@ interface StageDetailViewProps {
 export function StageDetailView({ stage, startups, onBack, onSelectStartup }: StageDetailViewProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [sectorFilter, setSectorFilter] = useState<string>("all")
-  const [stageFilter, setStageFilter] = useState<string>("all")
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
 
   const stageStartups = startups.filter((s) => s.pipelineStage === stage)
@@ -27,11 +26,6 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
   const sectors = useMemo(() => {
     const uniqueSectors = new Set(stageStartups.map((s) => s.sector))
     return Array.from(uniqueSectors).sort()
-  }, [stageStartups])
-
-  const stages = useMemo(() => {
-    const uniqueStages = new Set(stageStartups.map((s) => s.stage))
-    return Array.from(uniqueStages).sort()
   }, [stageStartups])
 
   const filteredStartups = useMemo(() => {
@@ -52,14 +46,10 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
       filtered = filtered.filter((s) => s.sector === sectorFilter)
     }
 
-    if (stageFilter !== "all") {
-      filtered = filtered.filter((s) => s.stage === stageFilter)
-    }
-
     filtered = filtered.filter((s) => s.score >= scoreRange[0] && s.score <= scoreRange[1])
 
     return filtered
-  }, [stageStartups, searchQuery, sectorFilter, stageFilter, scoreRange])
+  }, [stageStartups, searchQuery, sectorFilter, scoreRange])
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -109,24 +99,6 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
             </Select>
           </div>
 
-          {/* Stage Filter */}
-          <div className="w-[180px] space-y-1.5">
-            <label className="text-xs font-medium">Company Stage</label>
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="All Stages" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stages</SelectItem>
-                {stages.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Score Range */}
           <div className="w-[200px] space-y-1.5">
             <label className="text-xs font-medium">
@@ -150,7 +122,6 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
             onClick={() => {
               setSearchQuery("")
               setSectorFilter("all")
-              setStageFilter("all")
               setScoreRange([0, 100])
             }}
           >
