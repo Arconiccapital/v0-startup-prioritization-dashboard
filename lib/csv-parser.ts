@@ -253,10 +253,12 @@ export function suggestMapping(headers: string[]): ColumnMapping {
     // Company info
     else if (header === "linkedin url" || header.includes("linkedin")) {
       mapping.linkedinUrl = originalHeader
-    } else if (header === "location" || header.includes("location")) {
+    } else if (header === "address" || header === "location" || header.includes("location")) {
       mapping.location = originalHeader
-    } else if (header === "employee size" || header.includes("employee size")) {
+    } else if (header === "size" || header === "employee size" || header.includes("employee size")) {
       mapping.employeeSize = originalHeader
+    } else if (header === "employees" || header === "# employees" || header === "num employees") {
+      mapping.numEmployees = originalHeader
     } else if (header === "area") {
       mapping.area = originalHeader
     } else if (header === "venture capital firm" || header.includes("vc firm")) {
@@ -276,8 +278,6 @@ export function suggestMapping(headers: string[]): ColumnMapping {
       mapping.keyTeamMembers = originalHeader
     } else if (header === "team depth" || header.includes("team depth")) {
       mapping.teamDepth = originalHeader
-    } else if (header === "# employees" || header === "num employees") {
-      mapping.numEmployees = originalHeader
     }
 
     // Market info
@@ -343,7 +343,7 @@ export function suggestMapping(headers: string[]): ColumnMapping {
     }
 
     // AI scores & analysis
-    else if (header === "machine learning score" || header.includes("ml score")) {
+    else if (header === "machine learning score" || header === "ml score" || header.includes("ml score")) {
       mapping.machineLearningScore = originalHeader
     } else if (header === "arconic llm rules" || header.includes("llm rules")) {
       mapping.arconicLlmRules = originalHeader
