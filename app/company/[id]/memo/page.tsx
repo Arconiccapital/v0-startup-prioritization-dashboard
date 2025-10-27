@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Download, Loader2 } from "lucide-react"
 import { getStartupById } from "@/lib/startup-storage"
 import { useState, useEffect } from "react"
-import { generateMemoSections } from "@/lib/investment-memo-generator"
 import type { Startup } from "@/lib/types"
 
 interface MemoSection {
@@ -59,7 +58,20 @@ export default function InvestmentMemoPage() {
 
       try {
         console.log("[v0] Starting AI memo generation for:", startup.name)
-        const aiSections = await generateMemoSections(startup)
+
+        // Call API route instead of direct function
+        const response = await fetch("/api/generate-memo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(startup),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to generate memo")
+        }
+
+        const { sections: aiSections } = await response.json()
 
         // Update sections with AI-generated content
         setSections((prev) =>
@@ -88,16 +100,16 @@ export default function InvestmentMemoPage() {
             "AI generation rate limit reached. The free tier has temporary restrictions. Please try again later or upgrade to continue using AI features.",
           )
         } else {
-          setGeneralError("Failed to generate AI content. Please try again later.")
+          setGeneralError(`Failed to generate AI content: ${errorMessage}`)
         }
 
         // Mark all sections as failed
         setSections((prev) =>
           prev.map((section) => ({
             ...section,
-            content: "Content generation failed due to rate limits.",
+            content: "Content generation failed. Please check console for details.",
             isGenerating: false,
-            error: "Rate limit exceeded",
+            error: errorMessage,
           })),
         )
       } finally {
