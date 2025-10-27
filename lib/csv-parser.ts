@@ -188,7 +188,7 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
       },
 
       aiScores: {
-        llm: 0,
+        llm: scoreValue,
         ml: getNumericValue(mapping.machineLearningScore, values) || 0,
         sentiment: 0,
       },
