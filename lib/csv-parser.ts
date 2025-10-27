@@ -111,7 +111,7 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
     }
 
     const startup: Startup = {
-      id: `startup-${i}`,
+      id: `startup-${Date.now()}-${i}`,
       name: name || "",
       sector: sector || "",
       stage: stage || "",
