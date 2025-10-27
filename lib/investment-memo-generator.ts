@@ -28,6 +28,9 @@ function prepareCompanyData(startup: Startup) {
     opportunityInfo: startup.opportunityInfo,
     rationale: startup.rationale,
     thresholdIssues: startup.thresholdIssues,
+    initialAssessment: startup.initialAssessment,
+    investmentScorecard: startup.investmentScorecard,
+    documents: startup.documents,
   }
 }
 
@@ -172,11 +175,22 @@ export async function generateMemoSections(startup: Startup): Promise<Record<str
   const sectionPrompts = {
     executive: `Write a compelling 2-3 paragraph executive summary for ${startup.name}. Highlight the investment opportunity, key metrics (LLM Score: ${startup.aiScores?.llm || startup.score}/10, ML Score: ${startup.aiScores?.ml || startup.score}/10), market position, and overall assessment. Be concise and impactful.
 
+IMPORTANT: Reference and incorporate insights from:
+- Initial Assessment: ${companyData.initialAssessment ? JSON.stringify(companyData.initialAssessment) : "Not available"}
+- Investment Scorecard: ${companyData.investmentScorecard ? JSON.stringify(companyData.investmentScorecard) : "Not available"}
+- Meeting Transcript: ${companyData.documents?.transcript ? companyData.documents.transcript : "Not available"}
+- Pitch Deck Notes: ${companyData.documents?.pitchDeck ? companyData.documents.pitchDeck : "Not available"}
+
 Company Data: ${JSON.stringify(companyData, null, 2)}`,
 
     thesis: `Analyze the investment thesis for ${startup.name}. Provide:
 1. Key Strengths (3-5 bullet points with specific examples)
 2. Areas of Concern (2-4 bullet points with context)
+
+IMPORTANT: Draw insights from:
+- Initial Assessment: ${companyData.initialAssessment ? JSON.stringify(companyData.initialAssessment) : "Not available"}
+- Investment Scorecard Results: ${companyData.investmentScorecard ? JSON.stringify(companyData.investmentScorecard) : "Not available"}
+- Meeting Insights: ${companyData.documents?.transcript ? companyData.documents.transcript : "Not available"}
 
 Use this data: ${JSON.stringify({ rationale: companyData.rationale, scores: companyData.scores }, null, 2)}`,
 
@@ -218,6 +232,11 @@ Data: ${JSON.stringify(companyData.salesInfo, null, 2)}`,
 - Execution track record
 - Leadership quality
 
+IMPORTANT: Reference insights from:
+- Initial Team Assessment: ${companyData.initialAssessment?.teamQuality ? companyData.initialAssessment.teamQuality : "Not available"}
+- Meeting Transcript (founder interactions): ${companyData.documents?.transcript ? companyData.documents.transcript : "Not available"}
+- Pitch Deck (team slides): ${companyData.documents?.pitchDeck ? companyData.documents.pitchDeck : "Not available"}
+
 Data: ${JSON.stringify(companyData.teamInfo, null, 2)}`,
 
     competitive: `Analyze the competitive landscape for ${startup.name}. Cover:
@@ -233,7 +252,18 @@ Data: ${JSON.stringify(companyData.competitiveInfo, null, 2)}`,
 - Execution risks
 - Regulatory risks
 - Competitive risks
-- Threshold issues
+- Threshold issues (CRITICAL: Review all documented threshold issues in detail)
+
+IMPORTANT: Incorporate risk insights from:
+- Documented Threshold Issues: ${companyData.thresholdIssues && companyData.thresholdIssues.length > 0 ? JSON.stringify(companyData.thresholdIssues) : "No threshold issues documented"}
+- Initial Risk Assessment: ${companyData.initialAssessment ? JSON.stringify(companyData.initialAssessment) : "Not available"}
+- Meeting Discussion Points: ${companyData.documents?.transcript ? companyData.documents.transcript : "Not available"}
+
+CRITICAL: If threshold issues are documented, they MUST be prominently featured in this section with:
+- Category and risk rating
+- Detailed issue description
+- Mitigation strategies
+- Current status
 
 Data: ${JSON.stringify({ riskInfo: companyData.riskInfo, thresholdIssues: companyData.thresholdIssues }, null, 2)}`,
 
@@ -242,7 +272,12 @@ Data: ${JSON.stringify({ riskInfo: companyData.riskInfo, thresholdIssues: compan
 - Detailed rationale (2-3 paragraphs)
 - Specific next steps
 
-Consider: LLM Score ${startup.aiScores?.llm || startup.score}/10, ML Score ${startup.aiScores?.ml || startup.score}/10
+IMPORTANT: Base recommendation on comprehensive review of:
+- AI Scores: LLM ${startup.aiScores?.llm || startup.score}/10, ML ${startup.aiScores?.ml || startup.score}/10
+- Investment Scorecard Total Score: ${companyData.investmentScorecard?.totalScore ? companyData.investmentScorecard.totalScore : "Not calculated"}
+- Initial Assessment Summary: ${companyData.initialAssessment ? JSON.stringify(companyData.initialAssessment) : "Not available"}
+- Threshold Issues (if critical): ${companyData.thresholdIssues && companyData.thresholdIssues.length > 0 ? JSON.stringify(companyData.thresholdIssues) : "None documented"}
+- Meeting Outcomes: ${companyData.documents?.transcript ? companyData.documents.transcript : "Not available"}
 
 Data: ${JSON.stringify(companyData, null, 2)}`,
   }
