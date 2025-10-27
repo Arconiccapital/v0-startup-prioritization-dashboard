@@ -367,7 +367,7 @@ export function suggestMapping(headers: string[]): ColumnMapping {
       mapping.sector = originalHeader
     } else if (header.includes("stage") || header.includes("round")) {
       mapping.stage = originalHeader
-    } else if (header.includes("score") || header.includes("rating")) {
+    } else if (header.includes("arconic llm") || header.includes("score") || header.includes("rating")) {
       mapping.score = originalHeader
     }
   })

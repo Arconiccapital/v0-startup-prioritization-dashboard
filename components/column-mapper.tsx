@@ -514,6 +514,12 @@ export function ColumnMapper({ preview, suggestedMapping, onConfirm, onCancel }:
             </div>
 
             <MappingField
+              id="llmScore-mapping"
+              label="LLM Score"
+              value={mapping.score}
+              onChange={(v) => updateMapping("score", v)}
+            />
+            <MappingField
               id="mlScore-mapping"
               label="Machine Learning Score"
               value={mapping.machineLearningScore}
