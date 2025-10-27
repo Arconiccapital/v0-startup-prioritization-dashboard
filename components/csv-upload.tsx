@@ -105,63 +105,53 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
 
   const handleDownloadTemplate = () => {
     const headers = [
-      // Required fields
+      // User's exact column order (46 columns)
       "Company",
       "Description",
-      "Sector",
-      "Stage",
-      // Core company info
+      "Address",
       "Country",
       "Website",
       "LinkedIn URL",
-      "Location",
-      "Founding Year",
-      "Founders",
-      "Employee Size",
-      "Funding Raised",
+      "Size",
       "Area",
       "Venture Capital Firm",
-      // Team info
-      "Key Team Members",
-      "Team Depth",
+      "Founding Year",
+      "Founders",
       "Founders' Education",
       "Founders' Prior Experience",
-      "Team & Execution Assessment",
-      // Market info
-      "Industry",
+      "Key Team Members",
+      "Team Depth",
+      "Employees",
+      "B2B or B2C",
       "Sub-Industry",
       "Market Size",
       "AI Disruption Propensity",
+      "Industry",
       "Target Persona",
-      "B2B or B2C",
-      "Market & Competition Analysis",
-      // Product info
+      "Sales Motion",
+      "Sales Cycle Length",
       "Product Name",
       "Problem Solved",
       "Horizontal or Vertical",
-      "Moat",
-      // Business model
       "Revenue Model",
       "Pricing Strategy",
       "Unit Economics",
-      // Sales info
-      "Sales Motion",
-      "Sales Cycle Length",
+      "Moat",
+      "Competitors",
+      "Industry Multiples",
       "Go-to-Market Strategy",
       "Channels",
       "Sales Complexity",
-      // Competitive info
-      "Competitors",
-      "Industry Multiples",
-      // Risk & opportunity
       "Regulatory Risk",
       "Exit Potential",
-      // Scores & analysis
-      "Investment Score Overview",
       "Machine Learning Score",
+      "Investment Score Overview",
       "Key Strengths",
       "Areas of Concern",
+      "Market & Competition Analysis",
+      "Team & Execution Assessment",
       "Arconic LLM Rules",
+      "ML Score",
     ]
 
     const csvContent = headers.join(",") + "\n"

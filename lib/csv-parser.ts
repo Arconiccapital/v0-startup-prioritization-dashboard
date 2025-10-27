@@ -212,12 +212,12 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
     }
 
     // Only add if required fields are present
-    if (startup.name && startup.sector && startup.stage) {
+    if (startup.name && startup.sector) {
       console.log(`[v0] ✓ Successfully parsed row ${i}:`, startup.name, `(score: ${startup.score})`)
       startups.push(startup)
     } else {
       console.warn(
-        `[v0] Skipping row ${i}: missing required fields (name: ${!!startup.name}, sector: ${!!startup.sector}, stage: ${!!startup.stage})`,
+        `[v0] Skipping row ${i}: missing required fields (name: ${!!startup.name}, sector: ${!!startup.sector})`,
       )
     }
   }
