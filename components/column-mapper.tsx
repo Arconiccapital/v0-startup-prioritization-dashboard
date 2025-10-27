@@ -520,12 +520,6 @@ export function ColumnMapper({ preview, suggestedMapping, onConfirm, onCancel }:
               onChange={(v) => updateMapping("machineLearningScore", v)}
             />
             <MappingField
-              id="score-mapping"
-              label="Overall Score"
-              value={mapping.score}
-              onChange={(v) => updateMapping("score", v)}
-            />
-            <MappingField
               id="llmRules-mapping"
               label="LLM Rules / Analysis"
               value={mapping.arconicLlmRules}
