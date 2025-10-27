@@ -46,7 +46,7 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
     }
   }
 
-  const handleConfirmMapping = (mapping: ColumnMapping) => {
+  const handleConfirmMapping = async (mapping: ColumnMapping) => {
     if (!csvText) return
 
     try {
@@ -57,7 +57,10 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
         return
       }
 
+      // For large uploads, pass startups array directly
+      // The parent component will handle chunked uploading
       onUploadComplete(startups)
+
       // Reset state
       setPreview(null)
       setSuggestedMapping(null)
