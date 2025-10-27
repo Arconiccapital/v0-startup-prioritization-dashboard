@@ -132,7 +132,7 @@ function generateFallbackSection(sectionId: string, startup: Startup): string {
       return `Risk Analysis\n\n${regRisk ? `Regulatory Risk: ${regRisk}\n\n` : ""}${thresholdIssues.length > 0 ? `Threshold Issues:\n${thresholdIssues.map((issue, i) => `${i + 1}. ${issue.category} (${issue.riskRating}): ${issue.issue}${issue.mitigation ? `\n   Mitigation: ${issue.mitigation}` : ""}`).join("\n\n")}` : "No critical threshold issues have been identified at this stage. Standard early-stage risks include market adoption, competitive dynamics, execution challenges, and capital requirements. Ongoing monitoring and risk mitigation strategies will be important as the company scales."}\n\n${startup.riskInfo?.marketRisk ? `Market Risk: ${startup.riskInfo.marketRisk}` : ""}${startup.riskInfo?.executionRisk ? `\nExecution Risk: ${startup.riskInfo.executionRisk}` : ""}`
 
     case "recommendation":
-      const decision = avgScore >= 8 ? "STRONG PASS" : avgScore >= 6 ? "PASS" : avgScore >= 4 ? "HOLD" : "NO PASS"
+      const decision = avgScore >= 8 ? "Strong Yes" : avgScore >= 6 ? "Proceed with Further DD" : avgScore >= 4 ? "Monitor and Stay Warm" : "Pass"
       const decisionColor =
         avgScore >= 8 ? "strong" : avgScore >= 6 ? "positive" : avgScore >= 4 ? "cautious" : "negative"
 
@@ -142,7 +142,7 @@ function generateFallbackSection(sectionId: string, startup: Startup): string {
       } else if (avgScore >= 6) {
         rationale = `${startup.name} shows promising characteristics as an investment opportunity. The AI assessment scores (LLM: ${llmScore}/10, ML: ${mlScore}/10) suggest solid potential with some areas requiring further evaluation. ${startup.rationale?.areasOfConcern ? `Areas to monitor include ${startup.rationale.areasOfConcern.toLowerCase().substring(0, 200)}...` : "Continued progress on key metrics and milestones will strengthen the investment case."} We recommend scheduling follow-up meetings and conducting preliminary due diligence.`
       } else if (avgScore >= 4) {
-        rationale = `${startup.name} requires additional evaluation before making an investment decision. The AI assessment scores (LLM: ${llmScore}/10, ML: ${mlScore}/10) indicate mixed signals that warrant deeper analysis. ${startup.rationale?.areasOfConcern ? `Key concerns include ${startup.rationale.areasOfConcern.toLowerCase().substring(0, 200)}...` : "Several factors need to improve before this becomes an attractive investment opportunity."} We recommend monitoring progress over the next 3-6 months and reassessing at that time.`
+        rationale = `${startup.name} shows potential but requires significant progress before investment consideration. The AI assessment scores (LLM: ${llmScore}/10, ML: ${mlScore}/10) indicate mixed signals that warrant a "monitor and stay warm" approach. ${startup.rationale?.areasOfConcern ? `Key concerns include ${startup.rationale.areasOfConcern.toLowerCase().substring(0, 200)}...` : "Several factors need to improve before this becomes an attractive investment opportunity."} We recommend maintaining the relationship, tracking key milestones, and reassessing quarterly as the company progresses.`
       } else {
         rationale = `${startup.name} does not currently meet our investment criteria. The AI assessment scores (LLM: ${llmScore}/10, ML: ${mlScore}/10) suggest significant challenges that would need to be addressed. ${startup.rationale?.areasOfConcern ? `Primary concerns include ${startup.rationale.areasOfConcern.toLowerCase().substring(0, 200)}...` : "The company would need to demonstrate substantial progress across multiple dimensions before reconsidering."} We recommend no further action at this time.`
       }
@@ -153,8 +153,8 @@ function generateFallbackSection(sectionId: string, startup: Startup): string {
           : avgScore >= 6
             ? "1. Schedule follow-up meeting with founders\n2. Request additional financial and operational data\n3. Conduct preliminary customer and market research\n4. Reassess in 30-60 days with updated information"
             : avgScore >= 4
-              ? "1. Monitor company progress and key milestones\n2. Track market developments and competitive dynamics\n3. Maintain relationship with founders\n4. Reassess investment opportunity in 3-6 months"
-              : "1. Decline investment opportunity\n2. Provide constructive feedback to founders if appropriate\n3. No further action required at this time"
+              ? "1. Add to monitoring pipeline and track quarterly\n2. Stay in touch with founders through regular check-ins\n3. Monitor key milestones, metrics, and market developments\n4. Reassess investment opportunity when significant progress is made"
+              : "1. Pass on investment opportunity\n2. Provide constructive feedback to founders if appropriate\n3. No further action required at this time"
 
       return `Investment Recommendation\n\nDecision: ${decision}\n\n${rationale}\n\nNext Steps:\n${nextSteps}`
 
@@ -278,7 +278,7 @@ CRITICAL: If threshold issues are documented, they MUST be prominently featured 
 Data: ${JSON.stringify({ riskInfo: companyData.riskInfo, thresholdIssues: companyData.thresholdIssues }, null, 2)}`,
 
     recommendation: `Provide a clear investment recommendation for ${startup.name}. Include:
-- Decision: STRONG PASS, PASS, HOLD, or NO PASS
+- Decision: Strong Yes, Proceed with Further DD, Monitor and Stay Warm, or Pass
 - Detailed rationale (2-3 paragraphs)
 - Specific next steps
 
