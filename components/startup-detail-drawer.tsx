@@ -199,11 +199,39 @@ export function StartupDetailDrawer({
     }
   }
 
-  const handleUploadTranscript = () => {
-    if (transcript.trim() && onUploadDocument) {
-      onUploadDocument(startup.id, "transcript", transcript)
+  const handleUploadTranscript = async () => {
+    if (!transcript.trim()) return
+
+    try {
+      console.log("[Upload] Uploading transcript text")
+
+      const formData = new FormData()
+      formData.append("startupId", startup.id)
+      formData.append("docType", "transcript")
+      formData.append("textContent", transcript)
+
+      const response = await fetch("/api/upload-document", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload transcript")
+      }
+
+      const result = await response.json()
+      console.log("[Upload] Transcript uploaded successfully:", result)
+
+      // Reset state
       setTranscript("")
       setShowTranscriptInput(false)
+
+      // Refresh the page or update startup data
+      window.location.reload()
+    } catch (error) {
+      console.error("[Upload] Error uploading transcript:", error)
+      alert(`Failed to upload transcript: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -223,16 +251,38 @@ export function StartupDetailDrawer({
   }
 
   const handleUploadPitchDeckFile = async () => {
-    if (pitchDeckFile && onUploadDocument) {
-      // Convert PDF to base64 or just store the file name
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = reader.result as string
-        onUploadDocument(startup.id, "pitchDeck", base64)
-        setPitchDeckFile(null)
-        setShowPitchDeckInput(false)
+    if (!pitchDeckFile) return
+
+    try {
+      console.log("[Upload] Uploading PDF pitch deck:", pitchDeckFile.name)
+
+      const formData = new FormData()
+      formData.append("startupId", startup.id)
+      formData.append("docType", "pitchDeck")
+      formData.append("file", pitchDeckFile)
+
+      const response = await fetch("/api/upload-document", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload pitch deck")
       }
-      reader.readAsDataURL(pitchDeckFile)
+
+      const result = await response.json()
+      console.log("[Upload] Pitch deck uploaded successfully:", result)
+
+      // Reset state
+      setPitchDeckFile(null)
+      setShowPitchDeckInput(false)
+
+      // Refresh the page or update startup data
+      window.location.reload()
+    } catch (error) {
+      console.error("[Upload] Error uploading pitch deck:", error)
+      alert(`Failed to upload pitch deck: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -1181,14 +1231,15 @@ export function StartupDetailDrawer({
                         </div>
                       )}
 
-                      {startup.transcripts && startup.transcripts.length > 0 ? (
-                        <div className="space-y-2">
-                          {startup.transcripts.map((t, index) => (
-                            <div key={index} className="bg-background border border-border rounded-lg p-3">
-                              <div className="text-sm font-medium">Transcript {index + 1}</div>
-                              <div className="text-xs text-muted-foreground mt-1">{t.substring(0, 100)}...</div>
-                            </div>
-                          ))}
+                      {startup.documents?.transcript ? (
+                        <div className="bg-background border border-border rounded-lg p-3">
+                          <div className="text-sm font-medium">Meeting Transcript</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {startup.documents.transcript.substring(0, 150)}...
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {startup.documents.transcript.length} characters
+                          </div>
                         </div>
                       ) : (
                         <p className="text-muted-foreground text-sm">No transcripts uploaded yet</p>
@@ -1219,10 +1270,12 @@ export function StartupDetailDrawer({
                         </div>
                       )}
 
-                      {startup.pitchDeck ? (
+                      {startup.documents?.pitchDeck ? (
                         <div className="bg-background border border-border rounded-lg p-3">
                           <div className="text-sm font-medium">Pitch Deck Available</div>
-                          <div className="text-xs text-muted-foreground mt-1">PDF document uploaded</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {startup.documents.pitchDeck.length} characters extracted from PDF
+                          </div>
                         </div>
                       ) : (
                         <p className="text-muted-foreground text-sm">No pitch deck uploaded yet</p>
