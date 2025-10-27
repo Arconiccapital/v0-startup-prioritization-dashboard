@@ -25,18 +25,27 @@ export default function Home() {
   }, [])
 
   const handleUploadComplete = async (uploadedStartups: Startup[]) => {
-    const startupsWithStage = uploadedStartups.map((s) => ({
-      ...s,
-      pipelineStage: "Deal Flow" as PipelineStage,
-    }))
+    try {
+      console.log("[Upload] Starting upload of", uploadedStartups.length, "startups")
+      const startupsWithStage = uploadedStartups.map((s) => ({
+        ...s,
+        pipelineStage: "Deal Flow" as PipelineStage,
+      }))
 
-    // Upload to database
-    await addUploadedStartups(startupsWithStage)
+      // Upload to database
+      console.log("[Upload] Calling addUploadedStartups...")
+      await addUploadedStartups(startupsWithStage)
+      console.log("[Upload] Upload successful, reloading startups...")
 
-    // Reload startups from database
-    const { startups: refreshedStartups } = await getAllStartups()
-    setStartups(refreshedStartups)
-    setShowUpload(false)
+      // Reload startups from database
+      const { startups: refreshedStartups } = await getAllStartups()
+      console.log("[Upload] Loaded", refreshedStartups.length, "startups from database")
+      setStartups(refreshedStartups)
+      setShowUpload(false)
+    } catch (error) {
+      console.error("[Upload] Error uploading startups:", error)
+      alert(`Failed to upload companies: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
   }
 
   const handleSelectStartup = (startup: Startup) => {
