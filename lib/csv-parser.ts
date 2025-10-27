@@ -211,13 +211,13 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
       investmentScoreOverview: getValue(mapping.investmentScoreOverview, values),
     }
 
-    // Only add if required fields are present
-    if (startup.name && startup.sector) {
-      console.log(`[v0] ✓ Successfully parsed row ${i}:`, startup.name, `(score: ${startup.score})`)
+    // Only add if required fields are present (only name is required now)
+    if (startup.name) {
+      console.log(`[v0] ✓ Successfully parsed row ${i}:`, startup.name, `(sector: ${startup.sector || 'None'}, score: ${startup.score})`)
       startups.push(startup)
     } else {
       console.warn(
-        `[v0] Skipping row ${i}: missing required fields (name: ${!!startup.name}, sector: ${!!startup.sector})`,
+        `[v0] Skipping row ${i}: missing required field (name: ${!!startup.name})`,
       )
     }
   }
