@@ -290,7 +290,7 @@ export function suggestMapping(headers: string[]): ColumnMapping {
     } else if (header === "ai disruption propensity" || header.includes("ai disruption")) {
       mapping.aiDisruptionPropensity = originalHeader
     } else if (header === "industry" || header.includes("industry")) {
-      mapping.industry = originalHeader
+      mapping.sector = originalHeader
     } else if (header === "target persona" || header.includes("target persona")) {
       mapping.targetPersona = originalHeader
     }
