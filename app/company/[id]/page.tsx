@@ -222,17 +222,41 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     alert("Initial assessment saved successfully!")
   }
 
-  const handleUploadTranscript = () => {
+  const handleUploadTranscript = async () => {
     if (!transcriptText.trim()) {
       alert("Please enter transcript text")
       return
     }
 
-    console.log("[v0] Uploading transcript:", transcriptText.substring(0, 100))
-    alert("Transcript uploaded successfully!")
+    try {
+      console.log("[Upload] Uploading transcript text")
 
-    setTranscriptText("")
-    setShowTranscriptInput(false)
+      const formData = new FormData()
+      formData.append("startupId", id)
+      formData.append("docType", "transcript")
+      formData.append("textContent", transcriptText)
+
+      const response = await fetch("/api/upload-document", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload transcript")
+      }
+
+      const result = await response.json()
+      console.log("[Upload] Transcript uploaded successfully:", result)
+
+      // Reset state and reload to show updated document
+      setTranscriptText("")
+      setShowTranscriptInput(false)
+      window.location.reload()
+    } catch (error) {
+      console.error("[Upload] Error uploading transcript:", error)
+      alert(`Failed to upload transcript: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
   }
 
   const handlePitchDeckFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,17 +265,41 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  const handleUploadPitchDeckFile = () => {
+  const handleUploadPitchDeckFile = async () => {
     if (!pitchDeckFile) {
       alert("Please select a file")
       return
     }
 
-    console.log("[v0] Uploading pitch deck:", pitchDeckFile.name)
-    alert("Pitch deck uploaded successfully!")
+    try {
+      console.log("[Upload] Uploading PDF pitch deck:", pitchDeckFile.name)
 
-    setPitchDeckFile(null)
-    setShowPitchDeckInput(false)
+      const formData = new FormData()
+      formData.append("startupId", id)
+      formData.append("docType", "pitchDeck")
+      formData.append("file", pitchDeckFile)
+
+      const response = await fetch("/api/upload-document", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload pitch deck")
+      }
+
+      const result = await response.json()
+      console.log("[Upload] Pitch deck uploaded successfully:", result)
+
+      // Reset state and reload to show updated document
+      setPitchDeckFile(null)
+      setShowPitchDeckInput(false)
+      window.location.reload()
+    } catch (error) {
+      console.error("[Upload] Error uploading pitch deck:", error)
+      alert(`Failed to upload pitch deck: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
   }
 
   // Determine which tabs are available based on pipeline stage
