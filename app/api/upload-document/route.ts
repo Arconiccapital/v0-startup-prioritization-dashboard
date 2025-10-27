@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import pdf from "pdf-parse"
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,9 +30,11 @@ export async function POST(request: NextRequest) {
       console.log("[API] Processing PDF file:", file.name)
 
       try {
+        // Dynamic import for pdf-parse (CommonJS module)
+        const pdfParse = (await import("pdf-parse")).default
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
-        const data = await pdf(buffer)
+        const data = await pdfParse(buffer)
         extractedText = data.text
 
         console.log("[API] Extracted text length:", extractedText.length, "characters")
