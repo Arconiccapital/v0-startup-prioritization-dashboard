@@ -16,7 +16,7 @@ export default function Home() {
   const [showUpload, setShowUpload] = useState(false)
   const [viewingStage, setViewingStage] = useState<PipelineStage | null>(null)
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
-  const [limit, setLimit] = useState<number>(100)
+  const [limit, setLimit] = useState<number>(500)
   const [totalCount, setTotalCount] = useState<number>(0)
   const [sectorFilter, setSectorFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
@@ -227,6 +227,9 @@ export default function Home() {
                     <option value={100}>100</option>
                     <option value={200}>200</option>
                     <option value={500}>500</option>
+                    <option value={1000}>1,000</option>
+                    <option value={5000}>5,000</option>
+                    <option value={999999}>All</option>
                   </select>
                 </div>
               </div>
