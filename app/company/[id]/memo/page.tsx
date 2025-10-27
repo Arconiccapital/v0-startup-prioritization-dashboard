@@ -46,79 +46,110 @@ export default function InvestmentMemoPage() {
     { id: "recommendation", title: "Investment Recommendation", content: "", isGenerating: true },
   ])
 
-  const [isGenerating, setIsGenerating] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [generalError, setGeneralError] = useState<string | null>(null)
+  const [memoGeneratedAt, setMemoGeneratedAt] = useState<string | null>(null)
 
+  // Load saved memo on mount
   useEffect(() => {
     if (!startup || loading) return
 
-    const generateAIMemo = async () => {
-      setIsGenerating(true)
-      setGeneralError(null)
+    // Check if startup has a saved memo
+    if (startup.investmentMemo && typeof startup.investmentMemo === "object") {
+      const memoData = startup.investmentMemo as any
+      if (memoData.sections && memoData.generatedAt) {
+        console.log("[v0] Loading saved memo from:", memoData.generatedAt)
+        setMemoGeneratedAt(memoData.generatedAt)
 
-      try {
-        console.log("[v0] Starting AI memo generation for:", startup.name)
-
-        // Call API route instead of direct function
-        const response = await fetch("/api/generate-memo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(startup),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to generate memo")
-        }
-
-        const { sections: aiSections } = await response.json()
-
-        // Update sections with AI-generated content
+        // Load saved sections
         setSections((prev) =>
           prev.map((section) => {
-            const aiContent = aiSections[section.id]
-            if (aiContent) {
-              return { ...section, content: aiContent, isGenerating: false }
-            } else {
-              return {
-                ...section,
-                content: "Content generation failed. Please try again.",
-                isGenerating: false,
-                error: "Generation failed",
-              }
+            const savedContent = memoData.sections[section.id]
+            if (savedContent) {
+              return { ...section, content: savedContent, isGenerating: false }
             }
+            return section
           }),
         )
-        console.log("[v0] AI memo generation completed")
-      } catch (err) {
-        console.error("[v0] Error generating AI memo:", err)
-        const errorMessage = err instanceof Error ? err.message : "Unknown error"
-
-        // Check if it's a rate limit error
-        if (errorMessage.includes("rate_limit") || errorMessage.includes("429")) {
-          setGeneralError(
-            "AI generation rate limit reached. The free tier has temporary restrictions. Please try again later or upgrade to continue using AI features.",
-          )
-        } else {
-          setGeneralError(`Failed to generate AI content: ${errorMessage}`)
-        }
-
-        // Mark all sections as failed
-        setSections((prev) =>
-          prev.map((section) => ({
-            ...section,
-            content: "Content generation failed. Please check console for details.",
-            isGenerating: false,
-            error: errorMessage,
-          })),
-        )
-      } finally {
-        setIsGenerating(false)
+        return
       }
     }
 
+    // No saved memo, generate new one
+    console.log("[v0] No saved memo found, generating new one")
     generateAIMemo()
   }, [startup, loading])
+
+  const generateAIMemo = async () => {
+    if (!startup) return
+
+    setIsGenerating(true)
+    setGeneralError(null)
+
+    // Reset all sections to generating state
+    setSections((prev) => prev.map((section) => ({ ...section, content: "", isGenerating: true, error: undefined })))
+
+    try {
+      console.log("[v0] Starting AI memo generation for:", startup.name)
+
+      const response = await fetch("/api/generate-memo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(startup),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to generate memo")
+      }
+
+      const { sections: aiSections, generatedAt } = await response.json()
+
+      setMemoGeneratedAt(generatedAt)
+
+      // Update sections with AI-generated content
+      setSections((prev) =>
+        prev.map((section) => {
+          const aiContent = aiSections[section.id]
+          if (aiContent) {
+            return { ...section, content: aiContent, isGenerating: false }
+          } else {
+            return {
+              ...section,
+              content: "Content generation failed. Please try again.",
+              isGenerating: false,
+              error: "Generation failed",
+            }
+          }
+        }),
+      )
+      console.log("[v0] AI memo generation completed")
+    } catch (err) {
+      console.error("[v0] Error generating AI memo:", err)
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+
+      // Check if it's a rate limit error
+      if (errorMessage.includes("rate_limit") || errorMessage.includes("429")) {
+        setGeneralError(
+          "AI generation rate limit reached. The free tier has temporary restrictions. Please try again later or upgrade to continue using AI features.",
+        )
+      } else {
+        setGeneralError(`Failed to generate AI content: ${errorMessage}`)
+      }
+
+      // Mark all sections as failed
+      setSections((prev) =>
+        prev.map((section) => ({
+          ...section,
+          content: "Content generation failed. Please check console for details.",
+          isGenerating: false,
+          error: errorMessage,
+        })),
+      )
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -193,6 +224,10 @@ export default function InvestmentMemoPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <Button onClick={() => generateAIMemo()} variant="outline" size="sm" disabled={isGenerating}>
+                  <Loader2 className={`mr-2 h-4 w-4 ${isGenerating ? "animate-spin" : ""}`} />
+                  Regenerate Memo
+                </Button>
                 <Button onClick={handleDownloadPDF} variant="default" size="sm" disabled={isGenerating}>
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF
@@ -222,7 +257,8 @@ export default function InvestmentMemoPage() {
               </div>
               <div className="flex gap-6 text-sm text-muted-foreground">
                 <div>
-                  <span className="font-medium">Date:</span> {new Date().toLocaleDateString()}
+                  <span className="font-medium">Generated:</span>{" "}
+                  {memoGeneratedAt ? new Date(memoGeneratedAt).toLocaleDateString() : new Date().toLocaleDateString()}
                 </div>
                 <div>
                   <span className="font-medium">Stage:</span> {startup.pipelineStage}

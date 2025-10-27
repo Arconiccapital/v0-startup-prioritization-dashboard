@@ -18,7 +18,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
 
 export default function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -28,6 +27,15 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   const [memoCompanyName, setMemoCompanyName] = useState<string>("")
 
   const [scorecardScores, setScorecardScores] = useState<Record<string, number>>({})
+  const [reviewerName, setReviewerName] = useState("")
+  const [isSavingScorecard, setIsSavingScorecard] = useState(false)
+  const [scorecardLastSaved, setScorecardLastSaved] = useState<string | null>(null)
+  const [savedScorecards, setSavedScorecards] = useState<Array<{
+    reviewerName: string
+    scores: Record<string, number>
+    totalScore: number
+    lastUpdated: string
+  }>>([])
 
   const [startup, setStartup] = useState<ReturnType<typeof getStartupById>>(undefined)
   const [isLoading, setIsLoading] = useState(true)
@@ -81,6 +89,19 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (startup?.thresholdIssues) {
       setThresholdIssues(startup.thresholdIssues)
+    }
+    // Load existing scorecard data
+    if (startup?.investmentScorecard) {
+      const scorecardData = startup.investmentScorecard as any
+
+      // Handle both old format (single object) and new format (array)
+      if (Array.isArray(scorecardData)) {
+        // New format: array of scorecards
+        setSavedScorecards(scorecardData)
+      } else if (scorecardData.scores) {
+        // Old format: single scorecard object - migrate to array format
+        setSavedScorecards([scorecardData])
+      }
     }
   }, [startup]) // Re-run effect if startup changes
 
@@ -299,6 +320,57 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     } catch (error) {
       console.error("[Upload] Error uploading pitch deck:", error)
       alert(`Failed to upload pitch deck: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  const handleSaveScorecard = async () => {
+    try {
+      setIsSavingScorecard(true)
+
+      // Build new scorecard entry
+      const newScorecardEntry = {
+        reviewerName: reviewerName.trim() || "Anonymous",
+        scores: scorecardScores,
+        totalScore: parseFloat(calculateTotalScore()),
+        lastUpdated: new Date().toISOString(),
+      }
+
+      console.log("[Scorecard] Saving scorecard:", newScorecardEntry)
+
+      // Append to existing scorecards array
+      const updatedScorecards = [...savedScorecards, newScorecardEntry]
+
+      // Update startup with scorecard array
+      const response = await fetch(`/api/startups/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          investmentScorecard: updatedScorecards,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save scorecard")
+      }
+
+      const result = await response.json()
+      console.log("[Scorecard] Scorecard saved successfully")
+
+      // Update saved scorecards state
+      setSavedScorecards(updatedScorecards)
+
+      // Reset the form
+      setScorecardScores({})
+      setReviewerName("")
+      setScorecardLastSaved(null)
+
+      alert("Scorecard saved successfully!")
+    } catch (error) {
+      console.error("[Scorecard] Error saving scorecard:", error)
+      alert(`Failed to save scorecard: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsSavingScorecard(false)
     }
   }
 
@@ -852,6 +924,25 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   <div className="text-3xl font-bold text-primary">{calculateTotalScore()}</div>
                 </div>
               </div>
+
+              {/* Reviewer Name Input */}
+              <div className="mb-6 bg-muted/50 border border-border rounded-lg p-4">
+                <Label htmlFor="reviewer-name" className="text-sm font-medium mb-2 block">
+                  Your Name
+                </Label>
+                <Input
+                  id="reviewer-name"
+                  type="text"
+                  placeholder="Enter your name"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  className="max-w-md"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your scorecard will be saved and visible to all team members
+                </p>
+              </div>
+
               <p className="text-sm text-muted-foreground mb-6">
                 Score each criterion from 1-10 based on the guiding questions and descriptions below.
               </p>
@@ -882,21 +973,21 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                                 <p className="text-sm text-muted-foreground italic">{criterion.guidingQuestions}</p>
                               </div>
                               <div className="ml-4 flex items-center gap-3">
-                                <div className="flex items-center gap-3 flex-1 max-w-md">
-                                  <Slider
-                                    value={[score]}
-                                    onValueChange={(values) =>
-                                      handleScoreChange(criterion.section, criterion.criterion, values[0])
-                                    }
+                                <div className="flex items-center gap-3">
+                                  <Input
+                                    type="number"
+                                    value={score}
+                                    onChange={(e) => {
+                                      const value = parseInt(e.target.value) || 0
+                                      const clampedValue = Math.max(0, Math.min(10, value))
+                                      handleScoreChange(criterion.section, criterion.criterion, clampedValue)
+                                    }}
                                     min={0}
                                     max={10}
                                     step={1}
-                                    className="flex-1"
+                                    className="w-20 text-center"
                                   />
-                                  <div className="flex items-center gap-2 min-w-[100px]">
-                                    <div className="text-lg font-semibold w-8 text-center">{score}</div>
-                                    <div className="text-sm text-muted-foreground">/ 10</div>
-                                  </div>
+                                  <div className="text-sm text-muted-foreground">/ 10</div>
                                 </div>
                                 <Badge variant="outline" className="ml-2">
                                   {criterion.weight}%
@@ -974,6 +1065,100 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   </div>
                 </div>
               </div>
+
+              {/* Save Button */}
+              <div className="mt-8 flex justify-end gap-3">
+                <Button onClick={handleSaveScorecard} disabled={isSavingScorecard} size="lg" className="px-8">
+                  {isSavingScorecard ? "Saving..." : "Save Scorecard"}
+                </Button>
+              </div>
+
+              {/* Saved Scorecards Section */}
+              {savedScorecards.length > 0 && (
+                <div className="mt-12 border-t pt-8">
+                  <h4 className="text-lg font-semibold mb-6">
+                    Saved Scorecards ({savedScorecards.length})
+                  </h4>
+                  <div className="space-y-6">
+                    {savedScorecards
+                      .slice()
+                      .reverse()
+                      .map((scorecard, index) => {
+                        const actualIndex = savedScorecards.length - 1 - index
+                        return (
+                          <Card key={actualIndex} className="p-6 bg-muted/30">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h5 className="font-semibold text-lg">{scorecard.reviewerName}</h5>
+                                  <Badge variant="outline" className="text-sm">
+                                    Score: {scorecard.totalScore} / 100
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(scorecard.lastUpdated).toLocaleString("en-US", {
+                                    month: "long",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div
+                                  className={`text-4xl font-bold ${
+                                    scorecard.totalScore >= 70
+                                      ? "text-green-600"
+                                      : scorecard.totalScore >= 50
+                                        ? "text-yellow-600"
+                                        : "text-red-600"
+                                  }`}
+                                >
+                                  {scorecard.totalScore}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Section Breakdown */}
+                            <div className="mt-4 pt-4 border-t">
+                              <p className="text-sm font-medium text-muted-foreground mb-3">Score Breakdown by Section</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                {Object.entries(
+                                  SCORECARD_TEMPLATE.reduce(
+                                    (acc, criterion) => {
+                                      if (!acc[criterion.section]) {
+                                        acc[criterion.section] = { total: 0, weight: 0, scores: [] }
+                                      }
+                                      const key = `${criterion.section}-${criterion.criterion}`
+                                      const score = scorecard.scores[key] || 0
+                                      acc[criterion.section].total += (score / 10) * criterion.weight
+                                      acc[criterion.section].weight += criterion.weight
+                                      acc[criterion.section].scores.push(score)
+                                      return acc
+                                    },
+                                    {} as Record<string, { total: number; weight: number; scores: number[] }>,
+                                  ),
+                                ).map(([section, data]) => (
+                                  <div
+                                    key={section}
+                                    className="flex justify-between items-center p-3 bg-background rounded-lg"
+                                  >
+                                    <span className="text-sm font-medium">{section}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold">{data.total.toFixed(1)}</span>
+                                      <span className="text-xs text-muted-foreground">/ {data.weight}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </Card>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
             </Card>
           </TabsContent>
 
@@ -1136,8 +1321,16 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                     <div className="bg-muted border border-border rounded-lg p-3">
                       <div className="text-sm font-medium">Transcript Available</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {startup.documents.transcript.substring(0, 150)}...
+                        {typeof startup.documents.transcript === "string"
+                          ? startup.documents.transcript.substring(0, 150) + "..."
+                          : startup.documents.transcript.fileName || "transcript.txt"}
                       </div>
+                      {typeof startup.documents.transcript === "object" &&
+                        startup.documents.transcript.uploadedAt && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Uploaded: {new Date(startup.documents.transcript.uploadedAt).toLocaleString()}
+                          </div>
+                        )}
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm">No transcript uploaded yet</p>
@@ -1164,10 +1357,43 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   {startup.documents?.pitchDeck ? (
                     <div className="bg-muted border border-border rounded-lg p-3">
                       <div className="text-sm font-medium">Pitch Deck Available</div>
-                      <div className="text-xs text-muted-foreground mt-1">PDF document uploaded</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {typeof startup.documents.pitchDeck === "string"
+                          ? "PDF document uploaded"
+                          : startup.documents.pitchDeck.fileName || "pitch_deck.pdf"}
+                      </div>
+                      {typeof startup.documents.pitchDeck === "object" &&
+                        startup.documents.pitchDeck.uploadedAt && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Uploaded: {new Date(startup.documents.pitchDeck.uploadedAt).toLocaleString()}
+                          </div>
+                        )}
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm">No pitch deck uploaded yet</p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold">Investment Memo</h4>
+                    <Button onClick={() => router.push(`/company/${id}/memo`)} size="sm" variant="default">
+                      {startup.investmentMemo ? "View Memo" : "Generate Memo"}
+                    </Button>
+                  </div>
+
+                  {startup.investmentMemo && typeof startup.investmentMemo === "object" ? (
+                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="text-sm font-medium text-blue-900 dark:text-blue-100">Memo Generated</div>
+                      <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        Generated: {new Date((startup.investmentMemo as any).generatedAt).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                        Comprehensive investment analysis with 10 sections including executive summary, market analysis, team assessment, and investment recommendation.
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No investment memo generated yet</p>
                   )}
                 </div>
               </div>

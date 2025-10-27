@@ -68,7 +68,10 @@ model Startup {
   initialAssessment Json? // {marketOpportunity, teamQuality, productInnovation, businessModel, competitivePosition, commentary}
 
   // Investment Scorecard (stored as JSON)
-  investmentScorecard Json? // {criteria, totalScore, lastUpdated}
+  investmentScorecard Json? // Array of scorecards: [{reviewerName, scores, totalScore, lastUpdated}, ...]
+
+  // Investment Memo (stored as JSON)
+  investmentMemo  Json? // {sections: {executive, thesis, market, product, business, gtm, team, competitive, risk, recommendation}, generatedAt}
 
   // Documents (stored as JSON)
   documents       Json? // {transcript, pitchDeck}

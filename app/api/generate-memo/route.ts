@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { generateMemoSections } from "@/lib/investment-memo-generator"
+import { prisma } from "@/lib/prisma"
 import type { Startup } from "@/lib/types"
 
 export async function POST(request: NextRequest) {
@@ -16,7 +17,20 @@ export async function POST(request: NextRequest) {
 
     console.log("[API] Memo generation completed for:", startup.name)
 
-    return NextResponse.json({ sections }, { status: 200 })
+    // Save the generated memo to database
+    const memoData = {
+      sections,
+      generatedAt: new Date().toISOString(),
+    }
+
+    await prisma.startup.update({
+      where: { id: startup.id },
+      data: { investmentMemo: memoData },
+    })
+
+    console.log("[API] Memo saved to database for:", startup.name)
+
+    return NextResponse.json({ sections, generatedAt: memoData.generatedAt }, { status: 200 })
   } catch (error) {
     console.error("[API] Error generating memo:", error)
     const errorMessage = error instanceof Error ? error.message : "Unknown error"

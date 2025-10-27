@@ -7,6 +7,21 @@ const openai = createOpenAI({
 })
 
 function prepareCompanyData(startup: Startup) {
+  // Extract document text from both old format (string) and new format (object with text property)
+  const extractDocText = (doc: any): string => {
+    if (!doc) return ""
+    if (typeof doc === "string") return doc
+    if (typeof doc === "object" && doc.text) return doc.text
+    return ""
+  }
+
+  const documents = startup.documents
+    ? {
+        transcript: extractDocText((startup.documents as any).transcript),
+        pitchDeck: extractDocText((startup.documents as any).pitchDeck),
+      }
+    : undefined
+
   return {
     name: startup.name,
     description: startup.description,
@@ -30,7 +45,7 @@ function prepareCompanyData(startup: Startup) {
     thresholdIssues: startup.thresholdIssues,
     initialAssessment: startup.initialAssessment,
     investmentScorecard: startup.investmentScorecard,
-    documents: startup.documents,
+    documents: documents,
   }
 }
 
@@ -148,9 +163,6 @@ function generateFallbackSection(sectionId: string, startup: Startup): string {
   }
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
 
 export function generateTemplateMemo(startup: Startup): Record<string, string> {
   return {
@@ -169,8 +181,6 @@ export function generateTemplateMemo(startup: Startup): Record<string, string> {
 
 export async function generateMemoSections(startup: Startup): Promise<Record<string, string>> {
   const companyData = prepareCompanyData(startup)
-
-  const sections: Record<string, string> = {}
 
   const sectionPrompts = {
     executive: `Write a compelling 2-3 paragraph executive summary for ${startup.name}. Highlight the investment opportunity, key metrics (LLM Score: ${startup.aiScores?.llm || startup.score}/10, ML Score: ${startup.aiScores?.ml || startup.score}/10), market position, and overall assessment. Be concise and impactful.
@@ -282,32 +292,39 @@ IMPORTANT: Base recommendation on comprehensive review of:
 Data: ${JSON.stringify(companyData, null, 2)}`,
   }
 
-  for (const [sectionId, prompt] of Object.entries(sectionPrompts)) {
+  // Generate all sections in parallel for faster performance
+  console.log(`[v0] Starting parallel generation of ${Object.keys(sectionPrompts).length} sections`)
+
+  const sectionPromises = Object.entries(sectionPrompts).map(async ([sectionId, prompt]) => {
     try {
       console.log(`[v0] Generating section: ${sectionId}`)
 
       const { text } = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: openai("gpt-5-2025-08-07"),
         prompt: `You are a senior venture capital analyst. ${prompt}
 
 IMPORTANT: Write in plain text without any markdown formatting. Do not use asterisks for bold (**text**), do not use hashes for headers (## Header), do not use dashes or asterisks for bullet points. Write in clear, professional prose with proper paragraphs and natural formatting. Use line breaks to separate ideas but avoid markdown syntax entirely.
 
 Write in a professional, data-driven style. Be thorough but concise. Use specific examples and metrics where available.`,
-        temperature: 0.7,
-        maxTokens: 800,
       })
 
-      sections[sectionId] = text
       console.log(`[v0] Completed section: ${sectionId}`)
-
-      await delay(2000)
+      return [sectionId, text] as [string, string]
     } catch (error) {
       console.error(`[v0] Error generating ${sectionId}:`, error)
-      sections[sectionId] = generateFallbackSection(sectionId, startup)
+      return [
+        sectionId,
+        `⚠️ Error generating this section. Please regenerate the memo or check your API connection.\n\nError details: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ] as [string, string]
     }
-  }
+  })
 
-  return sections
+  const results = await Promise.all(sectionPromises)
+  const generatedSections = Object.fromEntries(results)
+
+  console.log(`[v0] Completed parallel generation of all sections`)
+
+  return generatedSections
 }
 
 export async function generateInvestmentMemo(startup: Startup): Promise<string> {

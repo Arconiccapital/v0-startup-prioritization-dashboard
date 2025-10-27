@@ -24,14 +24,16 @@ export async function POST(request: NextRequest) {
     }
 
     let extractedText = textContent || ""
+    let fileName = ""
 
     // If a PDF file was uploaded, extract text from it
     if (file && file.type === "application/pdf") {
-      console.log("[API] Processing PDF file:", file.name)
+      fileName = file.name
+      console.log("[API] Processing PDF file:", fileName)
 
       try {
-        // Dynamic import for pdf-parse (CommonJS module)
-        const pdfParse = (await import("pdf-parse")).default
+        // Use pdf-parse-fork for Next.js compatibility
+        const pdfParse = require("pdf-parse-fork")
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
         const data = await pdfParse(buffer)
@@ -55,11 +57,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update startup with document content
-    const currentDocs = (startup.documents as { transcript?: string; pitchDeck?: string }) || {}
+    // Update startup with document content and metadata
+    const currentDocs = (startup.documents as any) || {}
     const updatedDocs = {
       ...currentDocs,
-      [docType]: extractedText,
+      [docType]: {
+        text: extractedText,
+        fileName: fileName || `${docType}.txt`,
+        uploadedAt: new Date().toISOString(),
+      },
     }
 
     const updatedStartup = await prisma.startup.update({
