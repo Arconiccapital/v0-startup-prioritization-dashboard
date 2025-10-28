@@ -24,7 +24,7 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
   const stageStartups = startups.filter((s) => s.pipelineStage === stage)
 
   const sectors = useMemo(() => {
-    const uniqueSectors = new Set(stageStartups.map((s) => s.sector))
+    const uniqueSectors = new Set(stageStartups.map((s) => s.sector).filter(Boolean))
     return Array.from(uniqueSectors).sort()
   }, [stageStartups])
 
