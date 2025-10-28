@@ -282,7 +282,16 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
   const handlePitchDeckFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setPitchDeckFile(e.target.files[0])
+      const file = e.target.files[0]
+      const maxSize = 4 * 1024 * 1024 // 4 MB limit for Vercel
+
+      if (file.size > maxSize) {
+        alert(`File is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum file size is 4MB for pitch decks on Vercel.`)
+        e.target.value = '' // Reset the file input
+        return
+      }
+
+      setPitchDeckFile(file)
     }
   }
 
@@ -306,8 +315,19 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to upload pitch deck")
+        // Try to parse JSON error, but handle non-JSON responses (like HTML error pages)
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to upload pitch deck")
+        } else {
+          // Likely an HTML error page from Vercel (e.g., Request Entity Too Large)
+          const text = await response.text()
+          if (text.includes("Request Entity Too Large") || response.status === 413) {
+            throw new Error("File is too large. Vercel has a 4MB limit for uploads. Please use a smaller file.")
+          }
+          throw new Error(`Upload failed with status ${response.status}`)
+        }
       }
 
       const result = await response.json()
