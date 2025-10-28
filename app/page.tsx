@@ -103,10 +103,32 @@ export default function Home() {
     router.push(`/company/${startup.id}`)
   }
 
-  const handleMoveStartup = (startupId: string, newStage: PipelineStage) => {
+  const handleMoveStartup = async (startupId: string, newStage: PipelineStage) => {
+    // Optimistically update local state
     setStartups((prev) =>
       prev.map((startup) => (startup.id === startupId ? { ...startup, pipelineStage: newStage } : startup)),
     )
+
+    // Save to database
+    try {
+      const response = await fetch(`/api/startups/${startupId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStage: newStage }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update pipeline stage")
+      }
+
+      console.log(`[Pipeline] Successfully moved startup ${startupId} to ${newStage}`)
+    } catch (error) {
+      console.error("[Pipeline] Error updating stage:", error)
+      // Revert optimistic update on error
+      const { startups: refreshedStartups } = await getAllStartups({ limit })
+      setStartups(refreshedStartups)
+      alert("Failed to move company. Please try again.")
+    }
   }
 
   const handleViewStage = (stage: PipelineStage) => {
