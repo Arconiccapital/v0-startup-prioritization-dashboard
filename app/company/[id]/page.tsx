@@ -455,7 +455,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
               <ExternalLink className="h-3 w-3" />
             </a>
           ) : (
-            <div className="text-sm font-medium">{value}</div>
+            <div className="text-sm font-medium line-clamp-2">{value}</div>
           )
         ) : (
           <div className="text-sm text-muted-foreground italic">Not provided</div>
@@ -507,7 +507,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
           </div>
-          <p className="text-lg text-muted-foreground">{startup.description}</p>
+          <p className="text-lg text-muted-foreground line-clamp-2">{startup.description}</p>
         </div>
 
         {/* Current Stage Card */}
