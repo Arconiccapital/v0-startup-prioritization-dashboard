@@ -93,7 +93,7 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                   Rank ↕
                 </Button>
               </TableHead>
-              <TableHead className="w-[400px] max-w-[400px]">
+              <TableHead className="w-[800px] max-w-[800px]">
                 <Button variant="ghost" size="sm" onClick={() => handleSort("name")} className="h-7 px-2 text-xs">
                   Startup ↕
                 </Button>
@@ -144,7 +144,7 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                       <span>#{startup.rank}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[400px]">
+                  <TableCell className="max-w-[800px]">
                     <div className="max-w-full overflow-hidden">
                       <div className="font-medium text-foreground text-sm truncate">{startup.name}</div>
                       <div className="text-xs text-muted-foreground line-clamp-1">{startup.description}</div>
