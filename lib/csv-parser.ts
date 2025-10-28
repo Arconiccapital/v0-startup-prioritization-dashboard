@@ -104,9 +104,13 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
       if (parsedScore !== undefined) {
         scoreValue = parsedScore
       } else {
+        // Generate random score between 40-80 if score exists but can't be parsed
+        scoreValue = Math.floor(Math.random() * 41) + 40
         rowsWithMissingScores++
       }
     } else {
+      // Generate random score between 40-80 if no score column mapped
+      scoreValue = Math.floor(Math.random() * 41) + 40
       rowsWithMissingScores++
     }
 
