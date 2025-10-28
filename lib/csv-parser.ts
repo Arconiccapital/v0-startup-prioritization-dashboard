@@ -1,5 +1,53 @@
 import type { Startup, ColumnMapping, CSVPreview } from "./types"
 
+// Split CSV text into rows, handling multi-line quoted fields
+function splitCSVRows(csvText: string): string[] {
+  const rows: string[] = []
+  let currentRow = ""
+  let inQuotes = false
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i]
+    const nextChar = csvText[i + 1]
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote - add both quotes and skip next
+        currentRow += '""'
+        i++
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes
+        currentRow += char
+      }
+    } else if (char === '\n' && !inQuotes) {
+      // End of row (only when not inside quotes)
+      if (currentRow.trim()) {
+        rows.push(currentRow)
+      }
+      currentRow = ""
+    } else if (char === '\r' && nextChar === '\n' && !inQuotes) {
+      // Windows line ending (CRLF) - skip \r, \n will be handled next iteration
+      continue
+    } else if (char === '\r' && !inQuotes) {
+      // Mac line ending - treat as row separator
+      if (currentRow.trim()) {
+        rows.push(currentRow)
+      }
+      currentRow = ""
+    } else {
+      currentRow += char
+    }
+  }
+
+  // Add last row if not empty
+  if (currentRow.trim()) {
+    rows.push(currentRow)
+  }
+
+  return rows
+}
+
 function parseCSVLine(line: string): string[] {
   const result: string[] = []
   let current = ""
@@ -33,7 +81,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 export function parseCSVPreview(csvText: string): CSVPreview {
-  const lines = csvText.trim().split("\n")
+  const lines = splitCSVRows(csvText)
   if (lines.length < 1) {
     throw new Error("CSV file is empty")
   }
@@ -55,7 +103,7 @@ export function parseCSVPreview(csvText: string): CSVPreview {
 }
 
 export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): Startup[] {
-  const lines = csvText.trim().split("\n")
+  const lines = splitCSVRows(csvText)
   if (lines.length < 2) {
     throw new Error("CSV must contain headers and at least one data row")
   }
