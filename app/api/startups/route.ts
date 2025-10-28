@@ -105,6 +105,27 @@ function sanitizeStartupData(data: any) {
   return sanitized
 }
 
+// Helper function to recalculate all ranks based on LLM scores
+async function recalculateRanks() {
+  // Get all startups sorted by LLM score (descending)
+  const allStartups = await prisma.startup.findMany({
+    orderBy: [
+      { score: "desc" }, // Primary sort by overall score
+      { name: "asc" }, // Tie-breaker
+    ],
+  })
+
+  // Update ranks
+  for (let i = 0; i < allStartups.length; i++) {
+    await prisma.startup.update({
+      where: { id: allStartups[i].id },
+      data: { rank: i + 1 },
+    })
+  }
+
+  console.log(`[API] Recalculated ranks for ${allStartups.length} startups`)
+}
+
 // POST /api/startups - Create new startup(s)
 export async function POST(request: NextRequest) {
   try {
@@ -121,6 +142,9 @@ export async function POST(request: NextRequest) {
         skipDuplicates: true, // Skip if ID already exists
       })
 
+      // Recalculate ranks for all startups after bulk insert
+      await recalculateRanks()
+
       return NextResponse.json(
         {
           message: `Successfully created ${startups.count} startups`,
@@ -135,6 +159,9 @@ export async function POST(request: NextRequest) {
     const startup = await prisma.startup.create({
       data: sanitizedData,
     })
+
+    // Recalculate ranks after single insert too
+    await recalculateRanks()
 
     return NextResponse.json(startup, { status: 201 })
   } catch (error) {
