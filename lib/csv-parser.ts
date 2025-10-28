@@ -367,7 +367,11 @@ export function suggestMapping(headers: string[]): ColumnMapping {
       mapping.sector = originalHeader
     } else if (header.includes("stage") || header.includes("round")) {
       mapping.stage = originalHeader
-    } else if (header.includes("arconic llm") || header.includes("score") || header.includes("rating")) {
+    } else if ((header.includes("llm score") || header.includes("arconic llm")) && !header.includes("ml score")) {
+      // Prioritize LLM Score columns, but skip ML Score columns
+      mapping.score = originalHeader
+    } else if (!mapping.score && (header.includes("score") || header.includes("rating")) && !header.includes("machine learning")) {
+      // Fallback to generic score columns, but only if not already set and not ML score
       mapping.score = originalHeader
     }
   })
