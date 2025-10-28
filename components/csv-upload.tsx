@@ -33,6 +33,14 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
       return
     }
 
+    // Check file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+    if (file.size > maxSize) {
+      setError(`File is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum file size is 50MB.`)
+      setFileName(null)
+      return
+    }
+
     try {
       const text = await file.text()
       const csvPreview = parseCSVPreview(text)
