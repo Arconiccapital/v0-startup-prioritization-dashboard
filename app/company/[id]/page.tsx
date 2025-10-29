@@ -27,12 +27,14 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   const [memoCompanyName, setMemoCompanyName] = useState<string>("")
 
   const [scorecardScores, setScorecardScores] = useState<Record<string, number>>({})
+  const [scorecardComments, setScorecardComments] = useState<Record<string, string>>({})
   const [reviewerName, setReviewerName] = useState("")
   const [isSavingScorecard, setIsSavingScorecard] = useState(false)
   const [scorecardLastSaved, setScorecardLastSaved] = useState<string | null>(null)
   const [savedScorecards, setSavedScorecards] = useState<Array<{
     reviewerName: string
     scores: Record<string, number>
+    comments?: Record<string, string>
     totalScore: number
     lastUpdated: string
   }>>([])
@@ -284,9 +286,11 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       const maxSize = 4 * 1024 * 1024 // 4 MB limit for Vercel
+      const isProduction = window.location.hostname !== 'localhost'
 
-      if (file.size > maxSize) {
-        alert(`File is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum file size is 4MB for pitch decks on Vercel.`)
+      // Only enforce size limit on production (Vercel)
+      if (isProduction && file.size > maxSize) {
+        alert(`File is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum file size is 4MB for pitch decks on Vercel. Please use localhost for larger files or compress the PDF.`)
         e.target.value = '' // Reset the file input
         return
       }
@@ -351,6 +355,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
       const newScorecardEntry = {
         reviewerName: reviewerName.trim() || "Anonymous",
         scores: scorecardScores,
+        comments: scorecardComments,
         totalScore: parseFloat(calculateTotalScore()),
         lastUpdated: new Date().toISOString(),
       }
@@ -382,6 +387,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
       // Reset the form
       setScorecardScores({})
+      setScorecardComments({})
       setReviewerName("")
       setScorecardLastSaved(null)
 
@@ -1043,6 +1049,22 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                                 </div>
                               </div>
                             )}
+                            <div className="mt-3">
+                              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                                Comments / Notes
+                              </label>
+                              <Textarea
+                                value={scorecardComments[key] || ""}
+                                onChange={(e) => {
+                                  setScorecardComments((prev) => ({
+                                    ...prev,
+                                    [key]: e.target.value,
+                                  }))
+                                }}
+                                placeholder="Add your notes or reasoning for this score..."
+                                className="min-h-[80px] resize-y"
+                              />
+                            </div>
                           </Card>
                         )
                       })}
@@ -1173,6 +1195,27 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                                 ))}
                               </div>
                             </div>
+
+                            {/* Comments Section */}
+                            {scorecard.comments && Object.keys(scorecard.comments).length > 0 && (
+                              <div className="mt-4 pt-4 border-t">
+                                <p className="text-sm font-medium text-muted-foreground mb-3">Comments & Notes</p>
+                                <div className="space-y-3">
+                                  {Object.entries(scorecard.comments)
+                                    .filter(([_, comment]) => comment && comment.trim())
+                                    .map(([key, comment]) => {
+                                      // Extract criterion name from key (format: "section-criterion")
+                                      const criterionName = key.split('-').slice(1).join('-')
+                                      return (
+                                        <div key={key} className="p-3 bg-background rounded-lg border">
+                                          <p className="text-sm font-medium mb-1">{criterionName}</p>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment}</p>
+                                        </div>
+                                      )
+                                    })}
+                                </div>
+                              </div>
+                            )}
                           </Card>
                         )
                       })}
