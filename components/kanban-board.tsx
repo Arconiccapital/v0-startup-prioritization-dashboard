@@ -6,6 +6,7 @@ import type { Startup, PipelineStage } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 
 const PIPELINE_STAGES: PipelineStage[] = [
+  "Shortlist",
   "Deal Flow",
   "Intro Sent",
   "First Meeting",
