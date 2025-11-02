@@ -1,22 +1,26 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Startup } from "@/lib/types"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Star } from "lucide-react"
 
 interface StartupTableProps {
   startups: Startup[]
   onSelectStartup: (startup: Startup) => void
+  onToggleShortlist?: (startupId: string, shortlisted: boolean) => void
 }
 
 type SortField = "rank" | "name" | "score" | "ml_score" | "llm_score"
 type SortDirection = "asc" | "desc"
 
-export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
+export function StartupTable({ startups, onSelectStartup, onToggleShortlist }: StartupTableProps) {
   const [sortField, setSortField] = useState<SortField>("rank")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const parentRef = useRef<HTMLDivElement>(null)
 
   // Sort startups
   const sortedStartups = useMemo(() => {
@@ -59,6 +63,14 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
     return sorted
   }, [startups, sortField, sortDirection])
 
+  // Set up virtual scrolling
+  const rowVirtualizer = useVirtualizer({
+    count: sortedStartups.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 73, // Estimated row height in pixels
+    overscan: 10, // Render 10 extra rows above/below viewport for smooth scrolling
+  })
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -83,17 +95,24 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* Table */}
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <Table className="min-w-[900px]">
-          <TableHeader>
+      {/* Virtual Scrolling Table Container */}
+      <div
+        ref={parentRef}
+        className="rounded-lg border border-border bg-card overflow-auto"
+        style={{ height: "calc(100vh - 280px)" }} // Full height minus header/filters
+      >
+        <Table className="min-w-[1000px] table-fixed w-full">
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
+              <TableHead className="w-[60px]">
+                <span className="text-xs font-medium">⭐</span>
+              </TableHead>
               <TableHead className="w-[80px]">
                 <Button variant="ghost" size="sm" onClick={() => handleSort("rank")} className="h-7 px-2 text-xs">
                   Rank ↕
                 </Button>
               </TableHead>
-              <TableHead className="w-[800px] max-w-[800px]">
+              <TableHead className="min-w-[300px] max-w-[500px]">
                 <Button variant="ghost" size="sm" onClick={() => handleSort("name")} className="h-7 px-2 text-xs">
                   Startup ↕
                 </Button>
@@ -119,7 +138,6 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                 </Button>
               </TableHead>
               <TableHead className="w-[200px]">Sector</TableHead>
-              <TableHead className="w-[120px]">Stage</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -130,48 +148,81 @@ export function StartupTable({ startups, onSelectStartup }: StartupTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              sortedStartups.map((startup) => (
-                <TableRow
-                  key={startup.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => onSelectStartup(startup)}
-                >
-                  <TableCell className="font-medium text-sm">
-                    <div className="flex items-center gap-1.5">
-                      {startup.rank === 1 && <span className="text-base">🏆</span>}
-                      {startup.rank === 2 && <span className="text-base">🥈</span>}
-                      {startup.rank === 3 && <span className="text-base">🥉</span>}
-                      <span>#{startup.rank}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[800px]">
-                    <div className="max-w-full overflow-hidden">
-                      <div className="font-medium text-foreground text-sm truncate">{startup.name}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-1">{startup.description}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.llm)}`}>
-                      {formatScore(startup.aiScores?.llm)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.ml)}`}>
-                      {formatScore(startup.aiScores?.ml)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {startup.sector}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {startup.stage}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
+              <>
+                {/* Padding top to maintain scroll height */}
+                {rowVirtualizer.getVirtualItems().length > 0 && (
+                  <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px` }} />
+                )}
+
+                {/* Render only visible rows */}
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const startup = sortedStartups[virtualRow.index]
+                  return (
+                    <TableRow
+                      key={startup.id}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => onToggleShortlist?.(startup.id, !startup.shortlisted)}
+                          className="hover:scale-125 transition-transform"
+                        >
+                          <Star
+                            className={`w-5 h-5 ${
+                              startup.shortlisted
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300 hover:text-yellow-400"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+                      <TableCell className="font-medium text-sm" onClick={() => onSelectStartup(startup)}>
+                        <div className="flex items-center gap-1.5">
+                          {startup.rank === 1 && <span className="text-base">🏆</span>}
+                          {startup.rank === 2 && <span className="text-base">🥈</span>}
+                          {startup.rank === 3 && <span className="text-base">🥉</span>}
+                          <span>#{startup.rank}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-[300px] max-w-[500px]" onClick={() => onSelectStartup(startup)}>
+                        <div className="overflow-hidden">
+                          <div className="font-medium text-foreground text-sm truncate">{startup.name}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-1">{startup.description}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
+                        <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.llm)}`}>
+                          {formatScore(startup.aiScores?.llm)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
+                        <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.ml)}`}>
+                          {formatScore(startup.aiScores?.ml)}
+                        </span>
+                      </TableCell>
+                      <TableCell onClick={() => onSelectStartup(startup)}>
+                        <Badge variant="outline" className="text-xs">
+                          {startup.sector}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+
+                {/* Padding bottom to maintain scroll height */}
+                {rowVirtualizer.getVirtualItems().length > 0 && (
+                  <tr
+                    style={{
+                      height: `${
+                        rowVirtualizer.getTotalSize() -
+                        (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]?.end ?? 0)
+                      }px`,
+                    }}
+                  />
+                )}
+              </>
             )}
           </TableBody>
         </Table>
