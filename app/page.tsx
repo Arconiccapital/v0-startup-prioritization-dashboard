@@ -251,8 +251,8 @@ export default function Home() {
   }, [startups])
 
   const PIPELINE_STAGES: PipelineStage[] = [
-    "Shortlist",
     "Deal Flow",
+    "Shortlist",
     "Intro Sent",
     "First Meeting",
     "Due Diligence",
