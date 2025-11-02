@@ -41,6 +41,11 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
   const [startup, setStartup] = useState<ReturnType<typeof getStartupById>>(undefined)
   const [isLoading, setIsLoading] = useState(true)
+  const [shortlistedBy, setShortlistedBy] = useState<Array<{
+    userName: string
+    email: string
+    shortlistedAt: string
+  }>>([])
 
   useEffect(() => {
     // Load startup data on client side to avoid hydration mismatch
@@ -50,6 +55,24 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
       setIsLoading(false)
     }
     loadStartup()
+  }, [id])
+
+  // Load who shortlisted this company
+  useEffect(() => {
+    async function loadShortlist() {
+      try {
+        const response = await fetch(`/api/shortlist?startupId=${id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setShortlistedBy(data.shortlistedBy || [])
+        }
+      } catch (error) {
+        console.error("[Shortlist] Error loading shortlist:", error)
+      }
+    }
+    if (id) {
+      loadShortlist()
+    }
   }, [id])
 
   const [currentStage, setCurrentStage] = useState<PipelineStage>(startup?.pipelineStage || "Deal Flow")
@@ -566,6 +589,40 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
           </div>
           <p className="text-lg text-muted-foreground line-clamp-2">{startup.description}</p>
         </div>
+
+        {/* Shortlist Tracking Card */}
+        {shortlistedBy.length > 0 && (
+          <Card className="p-6 mb-8 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3">
+                  Shortlisted by {shortlistedBy.length} {shortlistedBy.length === 1 ? "person" : "people"}
+                </h3>
+                <div className="space-y-2">
+                  {shortlistedBy.map((user, idx) => (
+                    <div key={idx} className="flex items-center gap-3 text-sm">
+                      <div className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center font-semibold text-amber-700 dark:text-amber-300">
+                        {user.userName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium text-amber-900 dark:text-amber-100">{user.userName}</div>
+                        <div className="text-xs text-amber-700 dark:text-amber-300">
+                          {new Date(user.shortlistedAt).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Current Stage Card */}
         <Card className="p-6 mb-8 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
