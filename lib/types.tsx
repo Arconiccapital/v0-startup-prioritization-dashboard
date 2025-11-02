@@ -40,6 +40,7 @@ export interface InvestmentScorecard {
 // </CHANGE>
 
 export type PipelineStage =
+  | "Shortlist"
   | "Deal Flow"
   | "Intro Sent"
   | "First Meeting"

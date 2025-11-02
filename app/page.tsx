@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Slider } from "@/components/ui/slider"
 import { KanbanBoard } from "@/components/kanban-board"
 import { StageDetailView } from "@/components/stage-detail-view"
+import { StartupTable } from "@/components/startup-table"
 import { CsvUpload } from "@/components/csv-upload"
 import type { Startup, PipelineStage } from "@/lib/types"
 import Image from "next/image"
@@ -15,27 +17,38 @@ export default function Home() {
   const [startups, setStartups] = useState<Startup[]>([])
   const [showUpload, setShowUpload] = useState(false)
   const [viewingStage, setViewingStage] = useState<PipelineStage | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
+  const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban")
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; status?: string } | null>(null)
   const [limit, setLimit] = useState<number>(500)
   const [totalCount, setTotalCount] = useState<number>(0)
   const [sectorFilter, setSectorFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [stageFilter, setStageFilter] = useState<string>("")
+  const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
+  const [isLoading, setIsLoading] = useState(false)
+  const [showOnlyShortlisted, setShowOnlyShortlisted] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     async function loadStartups() {
-      const { startups, pagination } = await getAllStartups({
-        limit,
-        sector: sectorFilter || undefined,
-        search: searchQuery || undefined,
-        pipelineStage: stageFilter || undefined,
-      })
-      setStartups(startups)
-      setTotalCount(pagination?.total || 0)
+      setIsLoading(true)
+      try {
+        const { startups, pagination } = await getAllStartups({
+          limit,
+          sector: sectorFilter || undefined,
+          search: searchQuery || undefined,
+          pipelineStage: stageFilter || undefined,
+          minScore: scoreRange[0] > 0 ? scoreRange[0] : undefined,
+          maxScore: scoreRange[1] < 100 ? scoreRange[1] : undefined,
+        })
+        setStartups(startups)
+        setTotalCount(pagination?.total || 0)
+      } finally {
+        setIsLoading(false)
+      }
     }
     loadStartups()
-  }, [limit, sectorFilter, searchQuery, stageFilter])
+  }, [limit, sectorFilter, searchQuery, stageFilter, scoreRange])
 
   const handleUploadComplete = async (uploadedStartups: Startup[]) => {
     try {
@@ -81,10 +94,25 @@ export default function Home() {
       // Final progress update
       setUploadProgress({ current: totalUploaded, total: startupsWithStage.length })
 
-      console.log("[Upload] All batches uploaded successfully, reloading startups...")
+      console.log("[Upload] All batches uploaded successfully, recalculating ranks...")
 
-      // Reload startups from database
-      const { startups: refreshedStartups } = await getAllStartups()
+      // Recalculate ranks once after all batches are complete
+      setUploadProgress({ current: totalUploaded, total: totalUploaded, status: "Recalculating ranks..." })
+      const rankResponse = await fetch("/api/startups/recalculate-ranks", {
+        method: "POST",
+      })
+
+      if (rankResponse.ok) {
+        const rankResult = await rankResponse.json()
+        console.log(`[Upload] Ranks recalculated: ${rankResult.message}`)
+      } else {
+        console.warn("[Upload] Failed to recalculate ranks, but upload succeeded")
+      }
+
+      console.log("[Upload] Reloading startups from database...")
+
+      // Reload startups from database with current limit to avoid loading all 15K+ records
+      const { startups: refreshedStartups } = await getAllStartups({ limit })
       console.log("[Upload] Loaded", refreshedStartups.length, "startups from database")
 
       setStartups(refreshedStartups)
@@ -139,6 +167,83 @@ export default function Home() {
     setViewingStage(null)
   }
 
+  const handleSwitchToTableView = () => {
+    setViewMode("table")
+    setLimit(5000) // Load 5K companies initially (faster), user can increase if needed
+    setStageFilter("") // Clear stage filter to show all companies
+  }
+
+  const handleSwitchToKanbanView = () => {
+    setViewMode("kanban")
+  }
+
+  const handleToggleShortlist = async (startupId: string, shortlisted: boolean) => {
+    // Get the startup to determine its current stage
+    const startup = startups.find((s) => s.id === startupId)
+    if (!startup) return
+
+    // Determine the new pipeline stage
+    const newStage: PipelineStage = shortlisted
+      ? "Shortlist" // Move to Shortlist when favorited
+      : startup.pipelineStage === "Shortlist"
+        ? "Deal Flow" // Move back to Deal Flow if currently in Shortlist
+        : startup.pipelineStage // Keep current stage if it's been moved along the pipeline
+
+    // Optimistically update local state (both shortlist and pipeline stage)
+    setStartups((prev) =>
+      prev.map((startup) =>
+        startup.id === startupId ? { ...startup, shortlisted, pipelineStage: newStage } : startup,
+      ),
+    )
+
+    // Save to database using user-specific shortlist API
+    try {
+      const response = await fetch("/api/shortlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startupId, shortlisted }),
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert("Please log in to shortlist companies.")
+        } else {
+          throw new Error("Failed to update shortlist status")
+        }
+        // Revert optimistic update
+        setStartups((prev) =>
+          prev.map((startup) =>
+            startup.id === startupId
+              ? { ...startup, shortlisted: !shortlisted, pipelineStage: startup.pipelineStage }
+              : startup,
+          ),
+        )
+        return
+      }
+
+      // Update the pipeline stage in the database
+      const stageResponse = await fetch(`/api/startups/${startupId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStage: newStage }),
+      })
+
+      if (!stageResponse.ok) {
+        throw new Error("Failed to update pipeline stage")
+      }
+
+      console.log(
+        `[Shortlist] Successfully ${shortlisted ? "added" : "removed"} startup ${startupId} and moved to ${newStage}`,
+      )
+    } catch (error) {
+      console.error("[Shortlist] Error updating shortlist:", error)
+      // Revert optimistic update on error
+      const { startups: refreshedStartups } = await getAllStartups({ limit })
+      setStartups(refreshedStartups)
+      alert("Failed to update shortlist. Please try again.")
+    }
+  }
+
   // Get unique sectors and pipeline stages for filters
   const uniqueSectors = useMemo(() => {
     const sectors = new Set(startups.map((s) => s.sector).filter(Boolean))
@@ -146,6 +251,7 @@ export default function Home() {
   }, [startups])
 
   const PIPELINE_STAGES: PipelineStage[] = [
+    "Shortlist",
     "Deal Flow",
     "Intro Sent",
     "First Meeting",
@@ -159,7 +265,17 @@ export default function Home() {
     setSectorFilter("")
     setSearchQuery("")
     setStageFilter("")
+    setScoreRange([0, 100])
+    setShowOnlyShortlisted(false)
   }
+
+  // Filter startups by shortlist status (client-side)
+  const filteredStartups = useMemo(() => {
+    if (showOnlyShortlisted) {
+      return startups.filter((s) => s.shortlisted)
+    }
+    return startups
+  }, [startups, showOnlyShortlisted])
 
   if (showUpload) {
     return (
@@ -182,7 +298,9 @@ export default function Home() {
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Uploading Companies...</span>
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {uploadProgress.status || "Uploading Companies..."}
+                  </span>
                   <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                     {uploadProgress.current} / {uploadProgress.total}
                   </span>
@@ -194,8 +312,14 @@ export default function Home() {
                   />
                 </div>
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Batch {Math.floor(uploadProgress.current / 100) + 1} of {Math.ceil(uploadProgress.total / 100)} •
-                  Please don't close this page
+                  {uploadProgress.status === "Recalculating ranks..." ? (
+                    "Finalizing... Please don't close this page"
+                  ) : (
+                    <>
+                      Batch {Math.floor(uploadProgress.current / 100) + 1} of {Math.ceil(uploadProgress.total / 100)} •
+                      Please don't close this page
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -234,7 +358,8 @@ export default function Home() {
                 <div className="text-sm">
                   <span className="text-muted-foreground">Showing </span>
                   <span className="font-medium text-foreground">
-                    {startups.length} of {totalCount.toLocaleString()}
+                    {filteredStartups.length}
+                    {showOnlyShortlisted && ` shortlisted`} of {totalCount.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground"> companies</span>
                 </div>
@@ -257,6 +382,24 @@ export default function Home() {
               </div>
             </div>
             <div className="flex gap-2">
+              <div className="flex border border-border rounded-md">
+                <Button
+                  variant={viewMode === "kanban" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={handleSwitchToKanbanView}
+                  className="rounded-r-none"
+                >
+                  Pipeline
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={handleSwitchToTableView}
+                  className="rounded-l-none"
+                >
+                  All Companies
+                </Button>
+              </div>
               <Button variant="outline" onClick={() => setShowUpload(true)}>
                 Upload CSV
               </Button>
@@ -294,24 +437,60 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Pipeline Stage Filter */}
-          <div className="w-[180px]">
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
-              className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
+          {/* Pipeline Stage Filter - Only show in Kanban view */}
+          {viewMode === "kanban" && (
+            <div className="w-[180px]">
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
+              >
+                <option value="">All Stages</option>
+                {PIPELINE_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stage}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Score Range Slider - Show in table view */}
+          {viewMode === "table" && (
+            <div className="w-[240px] space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Score: {scoreRange[0]} - {scoreRange[1]}
+              </label>
+              <Slider
+                min={0}
+                max={100}
+                step={1}
+                value={scoreRange}
+                onValueChange={(value) => setScoreRange(value as [number, number])}
+                className="w-full"
+              />
+            </div>
+          )}
+
+          {/* My Shortlist Toggle - Show in table view */}
+          {viewMode === "table" && (
+            <Button
+              variant={showOnlyShortlisted ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowOnlyShortlisted(!showOnlyShortlisted)}
+              className="h-9"
             >
-              <option value="">All Stages</option>
-              {PIPELINE_STAGES.map((stage) => (
-                <option key={stage} value={stage}>
-                  {stage}
-                </option>
-              ))}
-            </select>
-          </div>
+              ⭐ My Shortlist
+            </Button>
+          )}
 
           {/* Reset Button */}
-          {(sectorFilter || searchQuery || stageFilter) && (
+          {(sectorFilter ||
+            searchQuery ||
+            stageFilter ||
+            scoreRange[0] > 0 ||
+            scoreRange[1] < 100 ||
+            showOnlyShortlisted) && (
             <Button variant="outline" size="sm" onClick={handleResetFilters} className="h-9">
               Reset Filters
             </Button>
@@ -320,12 +499,30 @@ export default function Home() {
       </div>
 
       <main className="flex-1 overflow-hidden">
-        <KanbanBoard
-          startups={startups}
-          onSelectStartup={handleSelectStartup}
-          onMoveStartup={handleMoveStartup}
-          onViewStage={handleViewStage}
-        />
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-sm text-muted-foreground">Loading {limit.toLocaleString()} companies...</p>
+            </div>
+          </div>
+        )}
+        {viewMode === "kanban" ? (
+          <KanbanBoard
+            startups={filteredStartups}
+            onSelectStartup={handleSelectStartup}
+            onMoveStartup={handleMoveStartup}
+            onViewStage={handleViewStage}
+          />
+        ) : (
+          <div className="h-full p-6">
+            <StartupTable
+              startups={filteredStartups}
+              onSelectStartup={handleSelectStartup}
+              onToggleShortlist={handleToggleShortlist}
+            />
+          </div>
+        )}
       </main>
     </div>
   )
