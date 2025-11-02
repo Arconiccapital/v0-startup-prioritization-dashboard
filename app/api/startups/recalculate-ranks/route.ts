@@ -1,33 +1,44 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// POST /api/startups/recalculate-ranks - Recalculate all ranks
+// POST /api/startups/recalculate-ranks - Recalculate all ranks using optimized SQL
 export async function POST() {
   try {
-    // Get all startups sorted by score (descending)
-    const allStartups = await prisma.startup.findMany({
-      orderBy: [
-        { score: "desc" }, // Primary sort by overall score
-        { name: "asc" }, // Tie-breaker
-      ],
-    })
+    console.log("[API] Starting optimized rank recalculation...")
+    const startTime = Date.now()
 
-    // Update ranks
-    for (let i = 0; i < allStartups.length; i++) {
-      await prisma.startup.update({
-        where: { id: allStartups[i].id },
-        data: { rank: i + 1 },
-      })
-    }
+    // Use raw SQL for much faster bulk update (single query instead of 12K updates)
+    // This creates a CTE (Common Table Expression) that assigns row numbers based on score
+    await prisma.$executeRaw`
+      UPDATE "Startup"
+      SET rank = ranked.new_rank
+      FROM (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (ORDER BY score DESC, name ASC) as new_rank
+        FROM "Startup"
+      ) AS ranked
+      WHERE "Startup".id = ranked.id
+    `
 
-    console.log(`[API] Recalculated ranks for ${allStartups.length} startups`)
+    // Get total count for response
+    const totalCount = await prisma.startup.count()
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.log(`[API] ✓ Recalculated ranks for ${totalCount} startups in ${duration}s using optimized SQL`)
 
     return NextResponse.json({
-      message: `Successfully recalculated ranks for ${allStartups.length} startups`,
-      count: allStartups.length,
+      success: true,
+      message: `Successfully recalculated ranks for ${totalCount} startups in ${duration}s`,
+      count: totalCount,
+      durationSeconds: parseFloat(duration),
     })
   } catch (error) {
     console.error("[API] Error recalculating ranks:", error)
-    return NextResponse.json({ error: "Failed to recalculate ranks" }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      error: "Failed to recalculate ranks",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 })
   }
 }

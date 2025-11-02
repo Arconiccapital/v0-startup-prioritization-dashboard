@@ -25,6 +25,9 @@ model Startup {
   feedback        Json     @default("[]") // Array of feedback items
   pipelineStage   String   @default("Deal Flow")
 
+  // User-specific shortlists (many-to-many)
+  shortlistedBy   UserShortlist[]
+
   // AI Scores (stored as JSON for flexibility)
   aiScores        Json? // {llm, ml, sentiment, llmAnalysis, mlAnalysis, sentimentAnalysis}
 
@@ -127,6 +130,7 @@ model User {
 
   accounts      Account[]
   sessions      Session[]
+  shortlists    UserShortlist[]
 
   @@index([email])
 }
@@ -170,4 +174,20 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+// User-specific shortlist (many-to-many relationship)
+model UserShortlist {
+  id        String   @id @default(uuid())
+  userId    String
+  startupId String
+  notes     String?  // Optional personal notes about why they shortlisted
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, startupId]) // One shortlist entry per user per startup
+  @@index([userId])
+  @@index([startupId])
 }

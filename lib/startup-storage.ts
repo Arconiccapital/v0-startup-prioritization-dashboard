@@ -8,6 +8,8 @@ export async function getAllStartups(options?: {
   sector?: string
   pipelineStage?: string
   search?: string
+  minScore?: number
+  maxScore?: number
 }): Promise<{ startups: Startup[]; pagination?: any }> {
   try {
     const params = new URLSearchParams()
@@ -17,6 +19,8 @@ export async function getAllStartups(options?: {
     if (options?.sector) params.set("sector", options.sector)
     if (options?.pipelineStage) params.set("pipelineStage", options.pipelineStage)
     if (options?.search) params.set("search", options.search)
+    if (options?.minScore !== undefined) params.set("minScore", options.minScore.toString())
+    if (options?.maxScore !== undefined) params.set("maxScore", options.maxScore.toString())
 
     const response = await fetch(`/api/startups?${params.toString()}`)
 

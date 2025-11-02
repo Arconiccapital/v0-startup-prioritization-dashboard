@@ -27,6 +27,7 @@ export default function Home() {
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
   const [isLoading, setIsLoading] = useState(false)
   const [showOnlyShortlisted, setShowOnlyShortlisted] = useState(false)
+  const [shortlistLoading, setShortlistLoading] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   useEffect(() => {
@@ -178,9 +179,15 @@ export default function Home() {
   }
 
   const handleToggleShortlist = async (startupId: string, shortlisted: boolean) => {
+    // Prevent duplicate operations
+    if (shortlistLoading.has(startupId)) return
+
     // Get the startup to determine its current stage
     const startup = startups.find((s) => s.id === startupId)
     if (!startup) return
+
+    // Add to loading state
+    setShortlistLoading((prev) => new Set(prev).add(startupId))
 
     // Determine the new pipeline stage
     const newStage: PipelineStage = shortlisted
@@ -188,6 +195,10 @@ export default function Home() {
       : startup.pipelineStage === "Shortlist"
         ? "Deal Flow" // Move back to Deal Flow if currently in Shortlist
         : startup.pipelineStage // Keep current stage if it's been moved along the pipeline
+
+    // Store original state for potential revert
+    const originalShortlisted = startup.shortlisted
+    const originalStage = startup.pipelineStage
 
     // Optimistically update local state (both shortlist and pipeline stage)
     setStartups((prev) =>
@@ -214,7 +225,7 @@ export default function Home() {
         setStartups((prev) =>
           prev.map((startup) =>
             startup.id === startupId
-              ? { ...startup, shortlisted: !shortlisted, pipelineStage: startup.pipelineStage }
+              ? { ...startup, shortlisted: originalShortlisted, pipelineStage: originalStage }
               : startup,
           ),
         )
@@ -238,9 +249,21 @@ export default function Home() {
     } catch (error) {
       console.error("[Shortlist] Error updating shortlist:", error)
       // Revert optimistic update on error
-      const { startups: refreshedStartups } = await getAllStartups({ limit })
-      setStartups(refreshedStartups)
+      setStartups((prev) =>
+        prev.map((startup) =>
+          startup.id === startupId
+            ? { ...startup, shortlisted: originalShortlisted, pipelineStage: originalStage }
+            : startup,
+        ),
+      )
       alert("Failed to update shortlist. Please try again.")
+    } finally {
+      // Remove from loading state
+      setShortlistLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(startupId)
+        return next
+      })
     }
   }
 
@@ -472,17 +495,15 @@ export default function Home() {
             </div>
           )}
 
-          {/* My Shortlist Toggle - Show in table view */}
-          {viewMode === "table" && (
-            <Button
-              variant={showOnlyShortlisted ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowOnlyShortlisted(!showOnlyShortlisted)}
-              className="h-9"
-            >
-              ⭐ My Shortlist
-            </Button>
-          )}
+          {/* My Shortlist Toggle - Show in both views */}
+          <Button
+            variant={showOnlyShortlisted ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowOnlyShortlisted(!showOnlyShortlisted)}
+            className="h-9"
+          >
+            ⭐ My Shortlist
+          </Button>
 
           {/* Reset Button */}
           {(sectorFilter ||
@@ -520,6 +541,7 @@ export default function Home() {
               startups={filteredStartups}
               onSelectStartup={handleSelectStartup}
               onToggleShortlist={handleToggleShortlist}
+              shortlistLoading={shortlistLoading}
             />
           </div>
         )}

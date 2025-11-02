@@ -11,6 +11,7 @@ export default auth((req) => {
     "/auth/signup",
     "/api/auth",
     "/api/startups", // API routes should be accessible
+    "/api/shortlist", // Handles its own authentication
     "/api/enrich",
     "/api/ai-assistant",
   ]

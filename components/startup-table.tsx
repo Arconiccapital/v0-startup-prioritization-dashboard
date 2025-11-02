@@ -12,12 +12,13 @@ interface StartupTableProps {
   startups: Startup[]
   onSelectStartup: (startup: Startup) => void
   onToggleShortlist?: (startupId: string, shortlisted: boolean) => void
+  shortlistLoading?: Set<string>
 }
 
 type SortField = "rank" | "name" | "score" | "ml_score" | "llm_score"
 type SortDirection = "asc" | "desc"
 
-export function StartupTable({ startups, onSelectStartup, onToggleShortlist }: StartupTableProps) {
+export function StartupTable({ startups, onSelectStartup, onToggleShortlist, shortlistLoading }: StartupTableProps) {
   const [sortField, setSortField] = useState<SortField>("rank")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const parentRef = useRef<HTMLDivElement>(null)
@@ -167,13 +168,16 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist }: S
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => onToggleShortlist?.(startup.id, !startup.shortlisted)}
-                          className="hover:scale-125 transition-transform"
+                          disabled={shortlistLoading?.has(startup.id)}
+                          className="hover:scale-125 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Star
                             className={`w-5 h-5 ${
-                              startup.shortlisted
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-gray-300 hover:text-yellow-400"
+                              shortlistLoading?.has(startup.id)
+                                ? "text-gray-400 animate-pulse"
+                                : startup.shortlisted
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300 hover:text-yellow-400"
                             }`}
                           />
                         </button>

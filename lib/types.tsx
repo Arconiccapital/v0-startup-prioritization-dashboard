@@ -1,5 +1,13 @@
 // ... existing code ...
 
+import type { Startup as PrismaStartup } from "@prisma/client"
+
+// Extend Prisma Startup type with computed properties
+export type Startup = PrismaStartup & {
+  shortlisted?: boolean // Computed property added by API based on UserShortlist
+  thresholdIssues?: ThresholdIssue[] // Relation included in some queries
+}
+
 export interface ThresholdIssue {
   id: string
   startupId: string
