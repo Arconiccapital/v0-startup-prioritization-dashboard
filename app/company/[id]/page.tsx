@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, FileText, ExternalLink } from "lucide-react"
+import { ArrowLeft, FileText, ExternalLink, Trash2 } from "lucide-react"
 import { getStartupById } from "@/lib/startup-storage"
 import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
 import type { PipelineStage, ThresholdIssue } from "@/lib/types"
@@ -397,6 +397,37 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
       alert(`Failed to save scorecard: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsSavingScorecard(false)
+    }
+  }
+
+  const handleDeleteScorecard = async (indexToDelete: number) => {
+    if (!confirm("Are you sure you want to delete this scorecard? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      // Remove the scorecard at the specified index
+      const updatedScorecards = savedScorecards.filter((_, index) => index !== indexToDelete)
+
+      // Update startup with new scorecards array
+      const response = await fetch(`/api/startups/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          investmentScorecard: updatedScorecards,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete scorecard")
+      }
+
+      // Update local state
+      setSavedScorecards(updatedScorecards)
+      alert("Scorecard deleted successfully!")
+    } catch (error) {
+      console.error("[Scorecard] Error deleting scorecard:", error)
+      alert(`Failed to delete scorecard: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -1147,75 +1178,119 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                                   })}
                                 </p>
                               </div>
-                              <div className="text-right">
-                                <div
-                                  className={`text-4xl font-bold ${
-                                    scorecard.totalScore >= 70
-                                      ? "text-green-600"
-                                      : scorecard.totalScore >= 50
-                                        ? "text-yellow-600"
-                                        : "text-red-600"
-                                  }`}
-                                >
-                                  {scorecard.totalScore}
+                              <div className="flex items-start gap-4">
+                                <div className="text-right">
+                                  <div
+                                    className={`text-4xl font-bold ${
+                                      scorecard.totalScore >= 70
+                                        ? "text-green-600"
+                                        : scorecard.totalScore >= 50
+                                          ? "text-yellow-600"
+                                          : "text-red-600"
+                                    }`}
+                                  >
+                                    {scorecard.totalScore}
+                                  </div>
                                 </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteScorecard(actualIndex)}
+                                  className="text-muted-foreground hover:text-destructive"
+                                  title="Delete scorecard"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
                               </div>
                             </div>
 
-                            {/* Section Breakdown */}
+                            {/* Section Breakdown with Comments */}
                             <div className="mt-4 pt-4 border-t">
-                              <p className="text-sm font-medium text-muted-foreground mb-3">Score Breakdown by Section</p>
-                              <div className="grid grid-cols-2 gap-4">
+                              <p className="text-sm font-medium text-muted-foreground mb-4">
+                                Score Breakdown with Commentary
+                              </p>
+                              <div className="space-y-4">
                                 {Object.entries(
                                   SCORECARD_TEMPLATE.reduce(
                                     (acc, criterion) => {
                                       if (!acc[criterion.section]) {
-                                        acc[criterion.section] = { total: 0, weight: 0, scores: [] }
+                                        acc[criterion.section] = {
+                                          total: 0,
+                                          weight: 0,
+                                          criteria: [],
+                                          comments: [],
+                                        }
                                       }
                                       const key = `${criterion.section}-${criterion.criterion}`
                                       const score = scorecard.scores[key] || 0
                                       acc[criterion.section].total += (score / 10) * criterion.weight
                                       acc[criterion.section].weight += criterion.weight
-                                      acc[criterion.section].scores.push(score)
+
+                                      // Store individual criterion with its score and comment
+                                      const comment =
+                                        scorecard.comments && scorecard.comments[key] ? scorecard.comments[key] : null
+
+                                      acc[criterion.section].criteria.push({
+                                        name: criterion.criterion,
+                                        score,
+                                        weight: criterion.weight,
+                                        comment: comment && comment.trim() ? comment : null,
+                                      })
+
                                       return acc
                                     },
-                                    {} as Record<string, { total: number; weight: number; scores: number[] }>,
+                                    {} as Record<
+                                      string,
+                                      {
+                                        total: number
+                                        weight: number
+                                        criteria: {
+                                          name: string
+                                          score: number
+                                          weight: number
+                                          comment: string | null
+                                        }[]
+                                        comments: { criterion: string; comment: string }[]
+                                      }
+                                    >,
                                   ),
                                 ).map(([section, data]) => (
-                                  <div
-                                    key={section}
-                                    className="flex justify-between items-center p-3 bg-background rounded-lg"
-                                  >
-                                    <span className="text-sm font-medium">{section}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold">{data.total.toFixed(1)}</span>
-                                      <span className="text-xs text-muted-foreground">/ {data.weight}</span>
+                                  <div key={section} className="border rounded-lg p-4 bg-background">
+                                    {/* Section Header with Total Score */}
+                                    <div className="flex justify-between items-center mb-4 pb-3 border-b">
+                                      <span className="text-base font-semibold">{section}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xl font-bold text-primary">{data.total.toFixed(1)}</span>
+                                        <span className="text-sm text-muted-foreground">/ {data.weight}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Individual Criteria with Scores and Comments */}
+                                    <div className="space-y-3">
+                                      {data.criteria.map((criterion, idx) => (
+                                        <div key={idx} className="pl-3 border-l-2 border-muted">
+                                          {/* Criterion Name and Score */}
+                                          <div className="flex justify-between items-center mb-1">
+                                            <span className="text-sm font-medium">{criterion.name}</span>
+                                            <div className="flex items-center gap-1.5">
+                                              <span className="text-sm font-semibold">{criterion.score}</span>
+                                              <span className="text-xs text-muted-foreground">/ 10</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Criterion Comment */}
+                                          {criterion.comment && (
+                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">
+                                              {criterion.comment}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 ))}
                               </div>
                             </div>
-
-                            {/* Comments Section */}
-                            {scorecard.comments && Object.keys(scorecard.comments).length > 0 && (
-                              <div className="mt-4 pt-4 border-t">
-                                <p className="text-sm font-medium text-muted-foreground mb-3">Comments & Notes</p>
-                                <div className="space-y-3">
-                                  {Object.entries(scorecard.comments)
-                                    .filter(([_, comment]) => comment && comment.trim())
-                                    .map(([key, comment]) => {
-                                      // Extract criterion name from key (format: "section-criterion")
-                                      const criterionName = key.split('-').slice(1).join('-')
-                                      return (
-                                        <div key={key} className="p-3 bg-background rounded-lg border">
-                                          <p className="text-sm font-medium mb-1">{criterionName}</p>
-                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment}</p>
-                                        </div>
-                                      )
-                                    })}
-                                </div>
-                              </div>
-                            )}
                           </Card>
                         )
                       })}
