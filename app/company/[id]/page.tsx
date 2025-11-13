@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, FileText, ExternalLink, Trash2 } from "lucide-react"
+import { ArrowLeft, FileText, ExternalLink, Trash2, Pencil } from "lucide-react"
 import { getStartupById } from "@/lib/startup-storage"
 import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
 import type { PipelineStage, ThresholdIssue } from "@/lib/types"
@@ -31,6 +31,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   const [reviewerName, setReviewerName] = useState("")
   const [isSavingScorecard, setIsSavingScorecard] = useState(false)
   const [scorecardLastSaved, setScorecardLastSaved] = useState<string | null>(null)
+  const [editingScorecardIndex, setEditingScorecardIndex] = useState<number | null>(null)
   const [savedScorecards, setSavedScorecards] = useState<Array<{
     reviewerName: string
     scores: Record<string, number>
@@ -90,11 +91,15 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   // State for threshold issues
   const [thresholdIssues, setThresholdIssues] = useState<ThresholdIssue[]>(startup?.thresholdIssues || [])
   const [showIssueForm, setShowIssueForm] = useState(false)
+  const [isGeneratingIssues, setIsGeneratingIssues] = useState(false)
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
+  const [isSavingIssue, setIsSavingIssue] = useState(false)
   const [newIssue, setNewIssue] = useState({
     category: "" as ThresholdIssue["category"],
     issue: "",
     riskRating: "" as ThresholdIssue["riskRating"],
     mitigation: "",
+    status: "Open" as ThresholdIssue["status"],
   })
 
   const [showTranscriptInput, setShowTranscriptInput] = useState(false)
@@ -110,6 +115,84 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     competitivePosition: 0,
   })
   const [assessmentCommentary, setAssessmentCommentary] = useState("")
+
+  // State for editing overview
+  const [isEditingOverview, setIsEditingOverview] = useState(false)
+  const [isSavingOverview, setIsSavingOverview] = useState(false)
+  const [editableData, setEditableData] = useState({
+    // Basic info
+    name: "",
+    description: "",
+    country: "",
+    // Company info
+    companyInfo: {
+      website: "",
+      linkedin: "",
+      location: "",
+      employeeCount: "",
+      area: "",
+      ventureCapitalFirm: "",
+      founded: "",
+      founders: "",
+    },
+    // Rationale
+    rationale: {
+      keyStrengths: "",
+      areasOfConcern: "",
+    },
+    // Market info
+    marketInfo: {
+      b2bOrB2c: "",
+      subIndustry: "",
+      marketSize: "",
+      aiDisruptionPropensity: "",
+      industry: "",
+      targetPersona: "",
+      marketCompetitionAnalysis: "",
+    },
+    // Team info
+    teamInfo: {
+      foundersEducation: "",
+      foundersPriorExperience: "",
+      keyTeamMembers: "",
+      teamDepth: "",
+      teamExecutionAssessment: "",
+    },
+    // Sales info
+    salesInfo: {
+      salesMotion: "",
+      salesCycleLength: "",
+      salesComplexity: "",
+      gtmStrategy: "",
+      channels: "",
+    },
+    // Product info
+    productInfo: {
+      productName: "",
+      horizontalOrVertical: "",
+      problemSolved: "",
+      moat: "",
+    },
+    // Business model info
+    businessModelInfo: {
+      revenueModel: "",
+      pricingStrategy: "",
+      unitEconomics: "",
+    },
+    // Competitive info
+    competitiveInfo: {
+      competitors: "",
+      industryMultiples: "",
+    },
+    // Risk info
+    riskInfo: {
+      regulatoryRisk: "",
+    },
+    // Opportunity info
+    opportunityInfo: {
+      exitPotential: "",
+    },
+  })
 
   useEffect(() => {
     if (startup?.thresholdIssues) {
@@ -127,6 +210,73 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
         // Old format: single scorecard object - migrate to array format
         setSavedScorecards([scorecardData])
       }
+    }
+
+    // Load startup data into editable state
+    if (startup) {
+      setEditableData({
+        name: startup.name || "",
+        description: startup.description || "",
+        country: startup.country || "",
+        companyInfo: {
+          website: startup.companyInfo?.website || "",
+          linkedin: startup.companyInfo?.linkedin || "",
+          location: startup.companyInfo?.location || "",
+          employeeCount: startup.companyInfo?.employeeCount || "",
+          area: startup.companyInfo?.area || "",
+          ventureCapitalFirm: startup.companyInfo?.ventureCapitalFirm || "",
+          founded: startup.companyInfo?.founded || "",
+          founders: startup.companyInfo?.founders || "",
+        },
+        rationale: {
+          keyStrengths: startup.rationale?.keyStrengths || "",
+          areasOfConcern: startup.rationale?.areasOfConcern || "",
+        },
+        marketInfo: {
+          b2bOrB2c: startup.marketInfo?.b2bOrB2c || "",
+          subIndustry: startup.marketInfo?.subIndustry || "",
+          marketSize: startup.marketInfo?.marketSize || "",
+          aiDisruptionPropensity: startup.marketInfo?.aiDisruptionPropensity || "",
+          industry: startup.marketInfo?.industry || "",
+          targetPersona: startup.marketInfo?.targetPersona || "",
+          marketCompetitionAnalysis: startup.marketInfo?.marketCompetitionAnalysis || "",
+        },
+        teamInfo: {
+          foundersEducation: startup.teamInfo?.foundersEducation || "",
+          foundersPriorExperience: startup.teamInfo?.foundersPriorExperience || "",
+          keyTeamMembers: startup.teamInfo?.keyTeamMembers || "",
+          teamDepth: startup.teamInfo?.teamDepth || "",
+          teamExecutionAssessment: startup.teamInfo?.teamExecutionAssessment || "",
+        },
+        salesInfo: {
+          salesMotion: startup.salesInfo?.salesMotion || "",
+          salesCycleLength: startup.salesInfo?.salesCycleLength || "",
+          salesComplexity: startup.salesInfo?.salesComplexity || "",
+          gtmStrategy: startup.salesInfo?.gtmStrategy || "",
+          channels: startup.salesInfo?.channels || "",
+        },
+        productInfo: {
+          productName: startup.productInfo?.productName || "",
+          horizontalOrVertical: startup.productInfo?.horizontalOrVertical || "",
+          problemSolved: startup.productInfo?.problemSolved || "",
+          moat: startup.productInfo?.moat || "",
+        },
+        businessModelInfo: {
+          revenueModel: startup.businessModelInfo?.revenueModel || "",
+          pricingStrategy: startup.businessModelInfo?.pricingStrategy || "",
+          unitEconomics: startup.businessModelInfo?.unitEconomics || "",
+        },
+        competitiveInfo: {
+          competitors: startup.competitiveInfo?.competitors || "",
+          industryMultiples: startup.competitiveInfo?.industryMultiples || "",
+        },
+        riskInfo: {
+          regulatoryRisk: startup.riskInfo?.regulatoryRisk || "",
+        },
+        opportunityInfo: {
+          exitPotential: startup.opportunityInfo?.exitPotential || "",
+        },
+      })
     }
   }, [startup]) // Re-run effect if startup changes
 
@@ -184,35 +334,278 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     return ""
   }
 
-  const handleSaveIssue = () => {
+  const handleSaveIssue = async () => {
     if (!newIssue.issue.trim() || !newIssue.mitigation.trim()) {
       alert("Please fill in all fields")
       return
     }
 
-    const newThresholdIssue: ThresholdIssue = {
-      category: newIssue.category || "Other", // Default category if none selected
-      issue: newIssue.issue,
-      riskRating: newIssue.riskRating || "Medium", // Default risk rating
-      mitigation: newIssue.mitigation,
-      status: "Open",
-      identifiedDate: new Date().toISOString().split("T")[0],
+    setIsSavingIssue(true)
+    try {
+      if (editingIssueId) {
+        // Update existing issue
+        const response = await fetch(`/api/threshold-issues/${editingIssueId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category: newIssue.category || "Other",
+            issue: newIssue.issue,
+            riskRating: newIssue.riskRating || "Medium",
+            mitigation: newIssue.mitigation,
+            status: newIssue.status,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to update threshold issue")
+        }
+
+        const updatedIssue = await response.json()
+
+        // Update local state
+        setThresholdIssues((prev) => prev.map((issue) => (issue.id === editingIssueId ? updatedIssue : issue)))
+
+        alert("Threshold issue updated successfully!")
+      } else {
+        // Create new issue
+        const response = await fetch("/api/threshold-issues", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startupId: id,
+            category: newIssue.category || "Other",
+            issue: newIssue.issue,
+            riskRating: newIssue.riskRating || "Medium",
+            mitigation: newIssue.mitigation,
+            status: newIssue.status,
+            source: "Manual",
+            identifiedDate: new Date().toISOString().split("T")[0],
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to create threshold issue")
+        }
+
+        const createdIssue = await response.json()
+
+        // Add to local state
+        setThresholdIssues((prev) => [...prev, createdIssue])
+
+        alert("Threshold issue saved successfully!")
+      }
+
+      // Reset form
+      setNewIssue({
+        category: "Other",
+        issue: "",
+        riskRating: "Medium",
+        mitigation: "",
+        status: "Open",
+      })
+      setEditingIssueId(null)
+      setShowIssueForm(false)
+    } catch (error) {
+      console.error("[Threshold Issues] Error saving issue:", error)
+      alert(`Failed to save threshold issue: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsSavingIssue(false)
     }
+  }
 
-    console.log("[v0] Saving threshold issue:", newThresholdIssue)
+  const handleEditIssue = (issue: ThresholdIssue) => {
+    setNewIssue({
+      category: issue.category,
+      issue: issue.issue,
+      riskRating: issue.riskRating,
+      mitigation: issue.mitigation,
+      status: issue.status,
+    })
+    setEditingIssueId(issue.id)
+    setShowIssueForm(true)
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
-    // Add to local state
-    setThresholdIssues((prev) => [...prev, newThresholdIssue])
-
-    alert("Threshold issue saved successfully!")
-
+  const handleCancelEditIssue = () => {
     setNewIssue({
       category: "Other",
       issue: "",
       riskRating: "Medium",
       mitigation: "",
+      status: "Open",
     })
+    setEditingIssueId(null)
     setShowIssueForm(false)
+  }
+
+  const handleDeleteIssue = async (issueId: string) => {
+    if (!confirm("Are you sure you want to delete this threshold issue? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/threshold-issues/${issueId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete threshold issue")
+      }
+
+      // Remove from local state
+      setThresholdIssues((prev) => prev.filter((issue) => issue.id !== issueId))
+
+      alert("Threshold issue deleted successfully!")
+    } catch (error) {
+      console.error("[Threshold Issues] Error deleting issue:", error)
+      alert(`Failed to delete threshold issue: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  const handleGenerateIssues = async () => {
+    setIsGeneratingIssues(true)
+    try {
+      const response = await fetch(`/api/startups/${id}/generate-issues`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        alert(`Failed to generate issues: ${result.error || result.details || "Unknown error"}`)
+        return
+      }
+
+      // Refresh startup data to get updated threshold issues
+      const updatedStartup = await getStartupById(id)
+      if (updatedStartup?.thresholdIssues) {
+        setThresholdIssues(updatedStartup.thresholdIssues)
+      }
+
+      // Show success message
+      if (result.count === 0) {
+        alert(result.message || "No new threshold issues identified from scorecard commentary")
+      } else {
+        const message =
+          result.skipped > 0
+            ? `Generated ${result.count} new threshold issue${result.count > 1 ? "s" : ""} (skipped ${result.skipped} duplicate${result.skipped > 1 ? "s" : ""})`
+            : `Generated ${result.count} new threshold issue${result.count > 1 ? "s" : ""}`
+        alert(message)
+      }
+    } catch (error) {
+      console.error("[Generate Issues] Error:", error)
+      alert(`Failed to generate issues: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsGeneratingIssues(false)
+    }
+  }
+
+  // Overview editing handlers
+  const handleStartEditOverview = () => {
+    setIsEditingOverview(true)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleCancelEditOverview = () => {
+    // Reload original data
+    if (startup) {
+      setEditableData({
+        name: startup.name || "",
+        description: startup.description || "",
+        country: startup.country || "",
+        companyInfo: {
+          website: startup.companyInfo?.website || "",
+          linkedin: startup.companyInfo?.linkedin || "",
+          location: startup.companyInfo?.location || "",
+          employeeCount: startup.companyInfo?.employeeCount || "",
+          area: startup.companyInfo?.area || "",
+          ventureCapitalFirm: startup.companyInfo?.ventureCapitalFirm || "",
+          founded: startup.companyInfo?.founded || "",
+          founders: startup.companyInfo?.founders || "",
+        },
+        rationale: {
+          keyStrengths: startup.rationale?.keyStrengths || "",
+          areasOfConcern: startup.rationale?.areasOfConcern || "",
+        },
+        marketInfo: {
+          b2bOrB2c: startup.marketInfo?.b2bOrB2c || "",
+          subIndustry: startup.marketInfo?.subIndustry || "",
+          marketSize: startup.marketInfo?.marketSize || "",
+          aiDisruptionPropensity: startup.marketInfo?.aiDisruptionPropensity || "",
+          industry: startup.marketInfo?.industry || "",
+          targetPersona: startup.marketInfo?.targetPersona || "",
+          marketCompetitionAnalysis: startup.marketInfo?.marketCompetitionAnalysis || "",
+        },
+        teamInfo: {
+          foundersEducation: startup.teamInfo?.foundersEducation || "",
+          foundersPriorExperience: startup.teamInfo?.foundersPriorExperience || "",
+          keyTeamMembers: startup.teamInfo?.keyTeamMembers || "",
+          teamDepth: startup.teamInfo?.teamDepth || "",
+          teamExecutionAssessment: startup.teamInfo?.teamExecutionAssessment || "",
+        },
+        salesInfo: {
+          salesMotion: startup.salesInfo?.salesMotion || "",
+          salesCycleLength: startup.salesInfo?.salesCycleLength || "",
+          salesComplexity: startup.salesInfo?.salesComplexity || "",
+          gtmStrategy: startup.salesInfo?.gtmStrategy || "",
+          channels: startup.salesInfo?.channels || "",
+        },
+        productInfo: {
+          productName: startup.productInfo?.productName || "",
+          horizontalOrVertical: startup.productInfo?.horizontalOrVertical || "",
+          problemSolved: startup.productInfo?.problemSolved || "",
+          moat: startup.productInfo?.moat || "",
+        },
+        businessModelInfo: {
+          revenueModel: startup.businessModelInfo?.revenueModel || "",
+          pricingStrategy: startup.businessModelInfo?.pricingStrategy || "",
+          unitEconomics: startup.businessModelInfo?.unitEconomics || "",
+        },
+        competitiveInfo: {
+          competitors: startup.competitiveInfo?.competitors || "",
+          industryMultiples: startup.competitiveInfo?.industryMultiples || "",
+        },
+        riskInfo: {
+          regulatoryRisk: startup.riskInfo?.regulatoryRisk || "",
+        },
+        opportunityInfo: {
+          exitPotential: startup.opportunityInfo?.exitPotential || "",
+        },
+      })
+    }
+    setIsEditingOverview(false)
+  }
+
+  const handleSaveOverview = async () => {
+    setIsSavingOverview(true)
+    try {
+      const response = await fetch(`/api/startups/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editableData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save overview")
+      }
+
+      // Reload the startup data
+      const updatedStartup = await getStartupById(id)
+      setStartup(updatedStartup)
+
+      setIsEditingOverview(false)
+      alert("Overview updated successfully!")
+    } catch (error) {
+      console.error("[Overview] Error saving overview:", error)
+      alert(`Failed to save overview: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsSavingOverview(false)
+    }
   }
 
   const getRiskColor = (rating: string) => {
@@ -385,8 +778,16 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
       console.log("[Scorecard] Saving scorecard:", newScorecardEntry)
 
-      // Append to existing scorecards array
-      const updatedScorecards = [...savedScorecards, newScorecardEntry]
+      // Update or append scorecard
+      let updatedScorecards
+      if (editingScorecardIndex !== null) {
+        // Update existing scorecard
+        updatedScorecards = [...savedScorecards]
+        updatedScorecards[editingScorecardIndex] = newScorecardEntry
+      } else {
+        // Append new scorecard
+        updatedScorecards = [...savedScorecards, newScorecardEntry]
+      }
 
       // Update startup with scorecard array
       const response = await fetch(`/api/startups/${id}`, {
@@ -412,15 +813,37 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
       setScorecardScores({})
       setScorecardComments({})
       setReviewerName("")
+      setEditingScorecardIndex(null)
       setScorecardLastSaved(null)
 
-      alert("Scorecard saved successfully!")
+      alert(
+        editingScorecardIndex !== null
+          ? "Scorecard updated successfully!"
+          : "Scorecard saved successfully!",
+      )
     } catch (error) {
       console.error("[Scorecard] Error saving scorecard:", error)
       alert(`Failed to save scorecard: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsSavingScorecard(false)
     }
+  }
+
+  const handleEditScorecard = (index: number) => {
+    const scorecard = savedScorecards[index]
+    setScorecardScores(scorecard.scores)
+    setScorecardComments(scorecard.comments || {})
+    setReviewerName(scorecard.reviewerName)
+    setEditingScorecardIndex(index)
+    // Scroll to top of scorecard form
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleCancelEdit = () => {
+    setScorecardScores({})
+    setScorecardComments({})
+    setReviewerName("")
+    setEditingScorecardIndex(null)
   }
 
   const handleDeleteScorecard = async (indexToDelete: number) => {
@@ -544,6 +967,43 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     )
   }
 
+  // EditableDataField component for overview editing
+  const EditableDataField = ({
+    label,
+    value,
+    onChange,
+    multiline = false,
+  }: {
+    label: string
+    value: string | undefined
+    onChange: (value: string) => void
+    multiline?: boolean
+  }) => {
+    if (!isEditingOverview) {
+      return <DataField label={label} value={value} />
+    }
+
+    return (
+      <div className="space-y-1">
+        <Label className="text-sm font-medium">{label}</Label>
+        {multiline ? (
+          <Textarea
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            className="min-h-[100px]"
+            placeholder={`Enter ${label.toLowerCase()}`}
+          />
+        ) : (
+          <Input
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={`Enter ${label.toLowerCase()}`}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -585,6 +1045,18 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                 <div className="text-sm text-muted-foreground mb-1">ML Score</div>
                 <div className="text-5xl font-bold text-green-600">{startup.aiScores?.ml || startup.score}</div>
               </div>
+              {startup.aiScores?.xgBoost && (
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground mb-1">XG Boost</div>
+                  <div className="text-5xl font-bold text-purple-600">{startup.aiScores.xgBoost}</div>
+                </div>
+              )}
+              {startup.aiScores?.lightGBM && (
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground mb-1">LightGBM</div>
+                  <div className="text-5xl font-bold text-orange-600">{startup.aiScores.lightGBM}</div>
+                </div>
+              )}
             </div>
           </div>
           <p className="text-lg text-muted-foreground line-clamp-2">{startup.description}</p>
@@ -664,6 +1136,33 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Edit Overview Controls */}
+            {!isEditingOverview ? (
+              <div className="flex justify-end mb-4">
+                <Button onClick={handleStartEditOverview} variant="outline" className="gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Edit Overview
+                </Button>
+              </div>
+            ) : (
+              <Card className="p-4 mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-blue-700 dark:text-blue-400">Editing Overview</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleCancelEditOverview} variant="outline" size="sm">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveOverview} disabled={isSavingOverview} size="sm">
+                      {isSavingOverview ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* AI-Generated Scores */}
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-6">AI-Generated Scores</h3>
@@ -678,6 +1177,20 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   <div className="text-5xl font-bold text-green-600">{startup.aiScores?.ml || 0}</div>
                   <Progress value={startup.aiScores?.ml || 0} className="h-2" />
                 </Card>
+                {startup.aiScores?.xgBoost && (
+                  <Card className="p-6 border-2">
+                    <div className="text-sm font-medium text-muted-foreground mb-2">XG BOOST</div>
+                    <div className="text-5xl font-bold text-purple-600 mb-4">{startup.aiScores.xgBoost}</div>
+                    <Progress value={startup.aiScores.xgBoost} className="h-2" />
+                  </Card>
+                )}
+                {startup.aiScores?.lightGBM && (
+                  <Card className="p-6 border-2">
+                    <div className="text-sm font-medium text-muted-foreground mb-2">LIGHTGBM V2</div>
+                    <div className="text-5xl font-bold text-orange-600 mb-4">{startup.aiScores.lightGBM}</div>
+                    <Progress value={startup.aiScores.lightGBM} className="h-2" />
+                  </Card>
+                )}
               </div>
             </Card>
 
@@ -685,30 +1198,58 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-4">Investment Analysis</h3>
               <div className="space-y-6">
-                <div>
-                  <h4 className="font-semibold mb-2 text-blue-600">Key Strengths</h4>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {startup.rationale?.keyStrengths || "Not provided"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2 text-blue-600">Areas of Concern</h4>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {startup.rationale?.areasOfConcern || "Not provided"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2 text-blue-600">Market & Competition Analysis</h4>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {startup.marketInfo?.marketCompetitionAnalysis || "Not provided"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2 text-blue-600">Team & Execution Assessment</h4>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {startup.teamInfo?.teamExecutionAssessment || "Not provided"}
-                  </p>
-                </div>
+                <EditableDataField
+                  label="Key Strengths"
+                  value={isEditingOverview ? editableData.rationale.keyStrengths : startup.rationale?.keyStrengths}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      rationale: { ...prev.rationale, keyStrengths: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Areas of Concern"
+                  value={isEditingOverview ? editableData.rationale.areasOfConcern : startup.rationale?.areasOfConcern}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      rationale: { ...prev.rationale, areasOfConcern: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Market & Competition Analysis"
+                  value={
+                    isEditingOverview
+                      ? editableData.marketInfo.marketCompetitionAnalysis
+                      : startup.marketInfo?.marketCompetitionAnalysis
+                  }
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, marketCompetitionAnalysis: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Team & Execution Assessment"
+                  value={
+                    isEditingOverview
+                      ? editableData.teamInfo.teamExecutionAssessment
+                      : startup.teamInfo?.teamExecutionAssessment
+                  }
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      teamInfo: { ...prev.teamInfo, teamExecutionAssessment: value },
+                    }))
+                  }
+                  multiline
+                />
               </div>
             </Card>
 
@@ -716,17 +1257,105 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Company Overview</h3>
               <div className="grid grid-cols-3 gap-6">
-                <DataField label="Company" value={startup.name} />
-                <DataField label="Description" value={startup.description} />
-                <DataField label="Country" value={startup.country} />
-                <DataField label="Website" value={startup.companyInfo?.website} link />
-                <DataField label="LinkedIn URL" value={startup.companyInfo?.linkedin} link />
-                <DataField label="Location" value={startup.companyInfo?.location} />
-                <DataField label="Employee Size" value={startup.companyInfo?.employeeCount} />
-                <DataField label="Area" value={startup.companyInfo?.area} />
-                <DataField label="Venture Capital Firm" value={startup.companyInfo?.ventureCapitalFirm} />
-                <DataField label="Founding Year" value={startup.companyInfo?.founded} />
-                <DataField label="Founders" value={startup.companyInfo?.founders} />
+                <EditableDataField
+                  label="Company"
+                  value={isEditingOverview ? editableData.name : startup.name}
+                  onChange={(value) => setEditableData((prev) => ({ ...prev, name: value }))}
+                />
+                <EditableDataField
+                  label="Description"
+                  value={isEditingOverview ? editableData.description : startup.description}
+                  onChange={(value) => setEditableData((prev) => ({ ...prev, description: value }))}
+                />
+                <EditableDataField
+                  label="Country"
+                  value={isEditingOverview ? editableData.country : startup.country}
+                  onChange={(value) => setEditableData((prev) => ({ ...prev, country: value }))}
+                />
+                <EditableDataField
+                  label="Website"
+                  value={isEditingOverview ? editableData.companyInfo.website : startup.companyInfo?.website}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, website: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="LinkedIn URL"
+                  value={isEditingOverview ? editableData.companyInfo.linkedin : startup.companyInfo?.linkedin}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, linkedin: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Location"
+                  value={isEditingOverview ? editableData.companyInfo.location : startup.companyInfo?.location}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, location: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Employee Size"
+                  value={isEditingOverview ? editableData.companyInfo.employeeCount : startup.companyInfo?.employeeCount}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, employeeCount: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Area"
+                  value={isEditingOverview ? editableData.companyInfo.area : startup.companyInfo?.area}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, area: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Venture Capital Firm"
+                  value={
+                    isEditingOverview
+                      ? editableData.companyInfo.ventureCapitalFirm
+                      : startup.companyInfo?.ventureCapitalFirm
+                  }
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, ventureCapitalFirm: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Founding Year"
+                  value={isEditingOverview ? editableData.companyInfo.founded : startup.companyInfo?.founded}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, founded: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Founders"
+                  value={isEditingOverview ? editableData.companyInfo.founders : startup.companyInfo?.founders}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, founders: value },
+                    }))
+                  }
+                />
               </div>
             </Card>
 
@@ -734,11 +1363,60 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Team & Founders</h3>
               <div className="space-y-4">
-                <DataField label="Founders' Education" value={startup.teamInfo?.foundersEducation} />
-                <DataField label="Founders' Prior Experience" value={startup.teamInfo?.foundersPriorExperience} />
-                <DataField label="Key Team Members" value={startup.teamInfo?.keyTeamMembers} />
-                <DataField label="Team Depth" value={startup.teamInfo?.teamDepth} />
-                <DataField label="# Employees" value={startup.companyInfo?.employeeCount} />
+                <EditableDataField
+                  label="Founders' Education"
+                  value={isEditingOverview ? editableData.teamInfo.foundersEducation : startup.teamInfo?.foundersEducation}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      teamInfo: { ...prev.teamInfo, foundersEducation: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Founders' Prior Experience"
+                  value={isEditingOverview ? editableData.teamInfo.foundersPriorExperience : startup.teamInfo?.foundersPriorExperience}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      teamInfo: { ...prev.teamInfo, foundersPriorExperience: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Key Team Members"
+                  value={isEditingOverview ? editableData.teamInfo.keyTeamMembers : startup.teamInfo?.keyTeamMembers}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      teamInfo: { ...prev.teamInfo, keyTeamMembers: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Team Depth"
+                  value={isEditingOverview ? editableData.teamInfo.teamDepth : startup.teamInfo?.teamDepth}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      teamInfo: { ...prev.teamInfo, teamDepth: value },
+                    }))
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="# Employees"
+                  value={isEditingOverview ? editableData.companyInfo.employeeCount : startup.companyInfo?.employeeCount}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      companyInfo: { ...prev.companyInfo, employeeCount: value },
+                    }))
+                  }
+                />
               </div>
             </Card>
 
@@ -746,12 +1424,66 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Market & Industry</h3>
               <div className="grid grid-cols-2 gap-6">
-                <DataField label="B2B or B2C" value={startup.marketInfo?.b2bOrB2c} />
-                <DataField label="Sub-Industry" value={startup.marketInfo?.subIndustry} />
-                <DataField label="Market Size" value={startup.marketInfo?.marketSize} />
-                <DataField label="AI Disruption Propensity" value={startup.marketInfo?.aiDisruptionPropensity} />
-                <DataField label="Industry" value={startup.marketInfo?.industry} />
-                <DataField label="Target Persona" value={startup.marketInfo?.targetPersona} />
+                <EditableDataField
+                  label="B2B or B2C"
+                  value={isEditingOverview ? editableData.marketInfo.b2bOrB2c : startup.marketInfo?.b2bOrB2c}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, b2bOrB2c: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Sub-Industry"
+                  value={isEditingOverview ? editableData.marketInfo.subIndustry : startup.marketInfo?.subIndustry}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, subIndustry: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Market Size"
+                  value={isEditingOverview ? editableData.marketInfo.marketSize : startup.marketInfo?.marketSize}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, marketSize: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="AI Disruption Propensity"
+                  value={isEditingOverview ? editableData.marketInfo.aiDisruptionPropensity : startup.marketInfo?.aiDisruptionPropensity}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, aiDisruptionPropensity: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Industry"
+                  value={isEditingOverview ? editableData.marketInfo.industry : startup.marketInfo?.industry}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, industry: value },
+                    }))
+                  }
+                />
+                <EditableDataField
+                  label="Target Persona"
+                  value={isEditingOverview ? editableData.marketInfo.targetPersona : startup.marketInfo?.targetPersona}
+                  onChange={(value) =>
+                    setEditableData((prev) => ({
+                      ...prev,
+                      marketInfo: { ...prev.marketInfo, targetPersona: value },
+                    }))
+                  }
+                />
               </div>
             </Card>
 
@@ -760,12 +1492,64 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
               <h3 className="text-lg font-semibold mb-4">Sales & Go-to-Market</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-6">
-                  <DataField label="Sales Motion" value={startup.salesInfo?.salesMotion} />
-                  <DataField label="Sales Cycle Length" value={startup.salesInfo?.salesCycleLength} />
-                  <DataField label="Sales Complexity" value={startup.salesInfo?.salesComplexity} />
+                  <EditableDataField
+                    label="Sales Motion"
+                    value={isEditingOverview ? editableData.salesInfo?.salesMotion : startup.salesInfo?.salesMotion}
+                    onChange={(val) =>
+                      setEditableData({
+                        ...editableData,
+                        salesInfo: { ...editableData.salesInfo, salesMotion: val },
+                      })
+                    }
+                  />
+                  <EditableDataField
+                    label="Sales Cycle Length"
+                    value={
+                      isEditingOverview
+                        ? editableData.salesInfo?.salesCycleLength
+                        : startup.salesInfo?.salesCycleLength
+                    }
+                    onChange={(val) =>
+                      setEditableData({
+                        ...editableData,
+                        salesInfo: { ...editableData.salesInfo, salesCycleLength: val },
+                      })
+                    }
+                  />
+                  <EditableDataField
+                    label="Sales Complexity"
+                    value={
+                      isEditingOverview ? editableData.salesInfo?.salesComplexity : startup.salesInfo?.salesComplexity
+                    }
+                    onChange={(val) =>
+                      setEditableData({
+                        ...editableData,
+                        salesInfo: { ...editableData.salesInfo, salesComplexity: val },
+                      })
+                    }
+                  />
                 </div>
-                <DataField label="Go-to-Market Strategy" value={startup.salesInfo?.gtmStrategy} />
-                <DataField label="Channels" value={startup.salesInfo?.channels} />
+                <EditableDataField
+                  label="Go-to-Market Strategy"
+                  value={isEditingOverview ? editableData.salesInfo?.gtmStrategy : startup.salesInfo?.gtmStrategy}
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      salesInfo: { ...editableData.salesInfo, gtmStrategy: val },
+                    })
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Channels"
+                  value={isEditingOverview ? editableData.salesInfo?.channels : startup.salesInfo?.channels}
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      salesInfo: { ...editableData.salesInfo, channels: val },
+                    })
+                  }
+                />
               </div>
             </Card>
 
@@ -774,11 +1558,55 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
               <h3 className="text-lg font-semibold mb-4">Product</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-6">
-                  <DataField label="Product Name" value={startup.productInfo?.productName} />
-                  <DataField label="Horizontal or Vertical" value={startup.productInfo?.horizontalOrVertical} />
+                  <EditableDataField
+                    label="Product Name"
+                    value={isEditingOverview ? editableData.productInfo?.productName : startup.productInfo?.productName}
+                    onChange={(val) =>
+                      setEditableData({
+                        ...editableData,
+                        productInfo: { ...editableData.productInfo, productName: val },
+                      })
+                    }
+                  />
+                  <EditableDataField
+                    label="Horizontal or Vertical"
+                    value={
+                      isEditingOverview
+                        ? editableData.productInfo?.horizontalOrVertical
+                        : startup.productInfo?.horizontalOrVertical
+                    }
+                    onChange={(val) =>
+                      setEditableData({
+                        ...editableData,
+                        productInfo: { ...editableData.productInfo, horizontalOrVertical: val },
+                      })
+                    }
+                  />
                 </div>
-                <DataField label="Problem Solved" value={startup.productInfo?.problemSolved} />
-                <DataField label="Moat" value={startup.productInfo?.moat} />
+                <EditableDataField
+                  label="Problem Solved"
+                  value={
+                    isEditingOverview ? editableData.productInfo?.problemSolved : startup.productInfo?.problemSolved
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      productInfo: { ...editableData.productInfo, problemSolved: val },
+                    })
+                  }
+                  multiline
+                />
+                <EditableDataField
+                  label="Moat"
+                  value={isEditingOverview ? editableData.productInfo?.moat : startup.productInfo?.moat}
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      productInfo: { ...editableData.productInfo, moat: val },
+                    })
+                  }
+                  multiline
+                />
               </div>
             </Card>
 
@@ -786,9 +1614,48 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Business Model</h3>
               <div className="grid grid-cols-2 gap-6">
-                <DataField label="Revenue Model" value={startup.businessModelInfo?.revenueModel} />
-                <DataField label="Pricing Strategy" value={startup.businessModelInfo?.pricingStrategy} />
-                <DataField label="Unit Economics" value={startup.businessModelInfo?.unitEconomics} />
+                <EditableDataField
+                  label="Revenue Model"
+                  value={
+                    isEditingOverview
+                      ? editableData.businessModelInfo?.revenueModel
+                      : startup.businessModelInfo?.revenueModel
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      businessModelInfo: { ...editableData.businessModelInfo, revenueModel: val },
+                    })
+                  }
+                />
+                <EditableDataField
+                  label="Pricing Strategy"
+                  value={
+                    isEditingOverview
+                      ? editableData.businessModelInfo?.pricingStrategy
+                      : startup.businessModelInfo?.pricingStrategy
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      businessModelInfo: { ...editableData.businessModelInfo, pricingStrategy: val },
+                    })
+                  }
+                />
+                <EditableDataField
+                  label="Unit Economics"
+                  value={
+                    isEditingOverview
+                      ? editableData.businessModelInfo?.unitEconomics
+                      : startup.businessModelInfo?.unitEconomics
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      businessModelInfo: { ...editableData.businessModelInfo, unitEconomics: val },
+                    })
+                  }
+                />
               </div>
             </Card>
 
@@ -796,8 +1663,32 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Competitive Landscape</h3>
               <div className="grid grid-cols-2 gap-6">
-                <DataField label="Competitors" value={startup.competitiveInfo?.competitors} />
-                <DataField label="Industry Multiples" value={startup.competitiveInfo?.industryMultiples} />
+                <EditableDataField
+                  label="Competitors"
+                  value={
+                    isEditingOverview ? editableData.competitiveInfo?.competitors : startup.competitiveInfo?.competitors
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      competitiveInfo: { ...editableData.competitiveInfo, competitors: val },
+                    })
+                  }
+                />
+                <EditableDataField
+                  label="Industry Multiples"
+                  value={
+                    isEditingOverview
+                      ? editableData.competitiveInfo?.industryMultiples
+                      : startup.competitiveInfo?.industryMultiples
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      competitiveInfo: { ...editableData.competitiveInfo, industryMultiples: val },
+                    })
+                  }
+                />
               </div>
             </Card>
 
@@ -805,8 +1696,30 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Risk & Opportunity</h3>
               <div className="grid grid-cols-2 gap-6">
-                <DataField label="Regulatory Risk" value={startup.riskInfo?.regulatoryRisk} />
-                <DataField label="Exit Potential" value={startup.opportunityInfo?.exitPotential} />
+                <EditableDataField
+                  label="Regulatory Risk"
+                  value={isEditingOverview ? editableData.riskInfo?.regulatoryRisk : startup.riskInfo?.regulatoryRisk}
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      riskInfo: { ...editableData.riskInfo, regulatoryRisk: val },
+                    })
+                  }
+                />
+                <EditableDataField
+                  label="Exit Potential"
+                  value={
+                    isEditingOverview
+                      ? editableData.opportunityInfo?.exitPotential
+                      : startup.opportunityInfo?.exitPotential
+                  }
+                  onChange={(val) =>
+                    setEditableData({
+                      ...editableData,
+                      opportunityInfo: { ...editableData.opportunityInfo, exitPotential: val },
+                    })
+                  }
+                />
               </div>
             </Card>
           </TabsContent>
@@ -1039,6 +1952,22 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
 
+              {/* Editing Indicator */}
+              {editingScorecardIndex !== null && (
+                <div className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-300 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-blue-700 dark:text-blue-400">
+                      Editing Scorecard by {savedScorecards[editingScorecardIndex]?.reviewerName}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+                    Make your changes below and click "Update Scorecard" to save, or "Cancel Edit" to discard
+                    changes.
+                  </p>
+                </div>
+              )}
+
               {/* Reviewer Name Input */}
               <div className="mb-6 bg-muted/50 border border-border rounded-lg p-4">
                 <Label htmlFor="reviewer-name" className="text-sm font-medium mb-2 block">
@@ -1198,8 +2127,17 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
               {/* Save Button */}
               <div className="mt-8 flex justify-end gap-3">
+                {editingScorecardIndex !== null && (
+                  <Button onClick={handleCancelEdit} variant="outline" size="lg" className="px-8">
+                    Cancel Edit
+                  </Button>
+                )}
                 <Button onClick={handleSaveScorecard} disabled={isSavingScorecard} size="lg" className="px-8">
-                  {isSavingScorecard ? "Saving..." : "Save Scorecard"}
+                  {isSavingScorecard
+                    ? "Saving..."
+                    : editingScorecardIndex !== null
+                      ? "Update Scorecard"
+                      : "Save Scorecard"}
                 </Button>
               </div>
 
@@ -1249,15 +2187,26 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                                     {scorecard.totalScore}
                                   </div>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteScorecard(actualIndex)}
-                                  className="text-muted-foreground hover:text-destructive"
-                                  title="Delete scorecard"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditScorecard(actualIndex)}
+                                    className="text-muted-foreground hover:text-blue-600"
+                                    title="Edit scorecard"
+                                  >
+                                    <Pencil className="h-5 w-5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteScorecard(actualIndex)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                    title="Delete scorecard"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
 
@@ -1362,14 +2311,32 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold">Threshold Issues</h3>
-                <Button onClick={() => setShowIssueForm(true)} size="sm">
-                  Add Issue
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGenerateIssues}
+                    disabled={isGeneratingIssues}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isGeneratingIssues ? "Generating..." : "Generate from Scorecard"}
+                  </Button>
+                  <Button onClick={() => setShowIssueForm(true)} size="sm">
+                    Add Issue
+                  </Button>
+                </div>
               </div>
 
               {showIssueForm && (
                 <div className="bg-muted border border-border rounded-lg p-4 mb-6">
-                  <h4 className="font-semibold mb-4">Add New Issue</h4>
+                  {editingIssueId && (
+                    <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Pencil className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-blue-700 dark:text-blue-400">Editing Threshold Issue</span>
+                      </div>
+                    </div>
+                  )}
+                  <h4 className="font-semibold mb-4">{editingIssueId ? "Edit Issue" : "Add New Issue"}</h4>
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium mb-1 block" htmlFor="issue-category">
@@ -1440,11 +2407,32 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                         placeholder="How can this risk be mitigated?"
                       />
                     </div>
+                    <div>
+                      <Label className="text-sm font-medium mb-1 block" htmlFor="issue-status">
+                        Status
+                      </Label>
+                      <Select
+                        value={newIssue.status}
+                        onValueChange={(value) =>
+                          setNewIssue({ ...newIssue, status: value as ThresholdIssue["status"] })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="In Progress">In Progress</SelectItem>
+                          <SelectItem value="Resolved">Resolved</SelectItem>
+                          <SelectItem value="Accepted Risk">Accepted Risk</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSaveIssue} size="sm">
-                        Save Issue
+                      <Button onClick={handleSaveIssue} disabled={isSavingIssue} size="sm">
+                        {isSavingIssue ? "Saving..." : editingIssueId ? "Update Issue" : "Save Issue"}
                       </Button>
-                      <Button onClick={() => setShowIssueForm(false)} variant="outline" size="sm">
+                      <Button onClick={handleCancelEditIssue} variant="outline" size="sm">
                         Cancel
                       </Button>
                     </div>
@@ -1457,14 +2445,43 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   thresholdIssues.map((issue, index) => (
                     <div key={index} className="bg-muted border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline">{issue.category}</Badge>
                           <Badge className={getRiskColor(issue.riskRating)}>{issue.riskRating} Risk</Badge>
                           <Badge className={getStatusColor(issue.status)}>{issue.status}</Badge>
+                          {issue.source === "AI" && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100">
+                              AI Generated
+                            </Badge>
+                          )}
                         </div>
-                        {issue.identifiedDate && (
-                          <div className="text-xs text-muted-foreground">Identified: {issue.identifiedDate}</div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {issue.identifiedDate && (
+                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                              Identified: {issue.identifiedDate}
+                            </div>
+                          )}
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditIssue(issue)}
+                              className="h-8 w-8 text-muted-foreground hover:text-blue-600"
+                              title="Edit issue"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteIssue(issue.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              title="Delete issue"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <div>

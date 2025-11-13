@@ -107,6 +107,7 @@ model ThresholdIssue {
   mitigation      String
   status          String   @default("Open") // "Open" | "In Progress" | "Resolved" | "Accepted Risk"
   identifiedDate  String?
+  source          String   @default("Manual") // "AI" | "Manual" - tracks how issue was created
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -114,6 +115,7 @@ model ThresholdIssue {
   @@index([startupId])
   @@index([riskRating])
   @@index([status])
+  @@index([source])
 }
 
 // NextAuth User Models

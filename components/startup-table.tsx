@@ -6,7 +6,7 @@ import type { Startup } from "@/lib/types"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star } from "lucide-react"
+import { Star, Loader2 } from "lucide-react"
 
 interface StartupTableProps {
   startups: Startup[]
@@ -51,6 +51,14 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
         case "llm_score":
           aVal = a.aiScores?.llm || 0
           bVal = b.aiScores?.llm || 0
+          break
+        case "xgboost_score":
+          aVal = a.aiScores?.xgBoost || 0
+          bVal = b.aiScores?.xgBoost || 0
+          break
+        case "lightgbm_score":
+          aVal = a.aiScores?.lightGBM || 0
+          bVal = b.aiScores?.lightGBM || 0
           break
       }
 
@@ -138,13 +146,33 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
                   ML ↕
                 </Button>
               </TableHead>
+              <TableHead className="w-[100px] text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort("xgboost_score")}
+                  className="h-7 px-2 text-xs ml-auto"
+                >
+                  XGB ↕
+                </Button>
+              </TableHead>
+              <TableHead className="w-[100px] text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort("lightgbm_score")}
+                  className="h-7 px-2 text-xs ml-auto"
+                >
+                  LGBM ↕
+                </Button>
+              </TableHead>
               <TableHead className="w-[200px]">Sector</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedStartups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
                   No startups found matching your filters
                 </TableCell>
               </TableRow>
@@ -167,19 +195,33 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
                     >
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => onToggleShortlist?.(startup.id, !startup.shortlisted)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            console.log("[Star Click] Startup:", startup.id, "Current shortlisted:", startup.shortlisted)
+                            console.log("[Star Click] onToggleShortlist function exists?", typeof onToggleShortlist)
+                            if (onToggleShortlist) {
+                              console.log("[Star Click] Calling onToggleShortlist")
+                              onToggleShortlist(startup.id, !startup.shortlisted)
+                            } else {
+                              console.error("[Star Click] onToggleShortlist is undefined!")
+                            }
+                          }}
                           disabled={shortlistLoading?.has(startup.id)}
-                          className="hover:scale-125 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="cursor-pointer p-1 hover:scale-125 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          type="button"
+                          title={shortlistLoading?.has(startup.id) ? "Saving..." : startup.shortlisted ? "Remove from shortlist" : "Add to shortlist"}
                         >
-                          <Star
-                            className={`w-5 h-5 ${
-                              shortlistLoading?.has(startup.id)
-                                ? "text-gray-400 animate-pulse"
-                                : startup.shortlisted
+                          {shortlistLoading?.has(startup.id) ? (
+                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                          ) : (
+                            <Star
+                              className={`w-5 h-5 ${
+                                startup.shortlisted
                                   ? "fill-yellow-400 text-yellow-400"
                                   : "text-gray-300 hover:text-yellow-400"
-                            }`}
-                          />
+                              }`}
+                            />
+                          )}
                         </button>
                       </TableCell>
                       <TableCell className="font-medium text-sm" onClick={() => onSelectStartup(startup)}>
@@ -204,6 +246,16 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
                       <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
                         <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.ml)}`}>
                           {formatScore(startup.aiScores?.ml)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
+                        <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.xgBoost)}`}>
+                          {formatScore(startup.aiScores?.xgBoost)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
+                        <span className={`font-semibold text-sm ${getScoreColor(startup.aiScores?.lightGBM)}`}>
+                          {formatScore(startup.aiScores?.lightGBM)}
                         </span>
                       </TableCell>
                       <TableCell onClick={() => onSelectStartup(startup)}>

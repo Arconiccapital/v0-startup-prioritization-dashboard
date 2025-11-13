@@ -3,7 +3,7 @@ const path = require('path');
 const readline = require('readline');
 
 const CSV_FILE = '/Users/alanyang/Downloads/12000companies_with_explanationsAY.csv';
-const API_URL = 'http://localhost:3002/api/startups';
+const API_URL = 'http://localhost:3003/api/startups';
 const BATCH_SIZE = 100;
 
 // Parse CSV line with proper quote handling
@@ -120,6 +120,14 @@ function mapRowToStartup(headers, values) {
     opportunityInfo: {
       exitPotential: row['Exit Potential'] || '',
     },
+
+    // Investment Analysis (Rationale)
+    rationale: {
+      keyStrengths: row['Key Strengths'] || '',
+      areasOfConcern: row['Areas of Concern'] || '',
+      marketAnalysis: row['Market & Competition Analysis'] || '',
+      teamAssessment: row['Team & Execution Assessment'] || '',
+    },
   };
 
   return startup;
@@ -222,7 +230,7 @@ async function main() {
   // Recalculate ranks
   console.log('\n🔄 Recalculating ranks...');
   try {
-    const rankResponse = await fetch('http://localhost:3002/api/startups/recalculate-ranks', {
+    const rankResponse = await fetch('http://localhost:3003/api/startups/recalculate-ranks', {
       method: 'POST',
     });
 

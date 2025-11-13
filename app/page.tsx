@@ -179,12 +179,22 @@ export default function Home() {
   }
 
   const handleToggleShortlist = async (startupId: string, shortlisted: boolean) => {
+    console.log("[handleToggleShortlist] Called with:", { startupId, shortlisted })
+
     // Prevent duplicate operations
-    if (shortlistLoading.has(startupId)) return
+    if (shortlistLoading.has(startupId)) {
+      console.log("[handleToggleShortlist] Already loading, returning early")
+      return
+    }
 
     // Get the startup to determine its current stage
     const startup = startups.find((s) => s.id === startupId)
-    if (!startup) return
+    if (!startup) {
+      console.log("[handleToggleShortlist] Startup not found, returning early")
+      return
+    }
+
+    console.log("[handleToggleShortlist] Found startup:", startup.name)
 
     // Add to loading state
     setShortlistLoading((prev) => new Set(prev).add(startupId))
@@ -195,6 +205,8 @@ export default function Home() {
       : startup.pipelineStage === "Shortlist"
         ? "Deal Flow" // Move back to Deal Flow if currently in Shortlist
         : startup.pipelineStage // Keep current stage if it's been moved along the pipeline
+
+    console.log("[handleToggleShortlist] New stage:", newStage)
 
     // Store original state for potential revert
     const originalShortlisted = startup.shortlisted
@@ -209,11 +221,13 @@ export default function Home() {
 
     // Save to database using user-specific shortlist API
     try {
+      console.log("[handleToggleShortlist] Making fetch request to /api/shortlist")
       const response = await fetch("/api/shortlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startupId, shortlisted }),
       })
+      console.log("[handleToggleShortlist] Response status:", response.status)
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -362,6 +376,8 @@ export default function Home() {
         onBack={handleBackToPipeline}
         onSelectStartup={handleSelectStartup}
         onMoveStartup={handleMoveStartup}
+        onToggleShortlist={handleToggleShortlist}
+        shortlistLoading={shortlistLoading}
       />
     )
   }

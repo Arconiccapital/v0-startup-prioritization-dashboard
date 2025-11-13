@@ -142,7 +142,7 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
     const name = getValue(mapping.name, values)
     const description = getValue(mapping.description, values)
     const sector = getValue(mapping.sector || mapping.industry, values)
-    const stage = getValue(mapping.stage, values)
+    const stage = getValue(mapping.stage || mapping.status, values)
 
     // Parse score
     let scoreValue = 0
@@ -176,6 +176,7 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
 
       companyInfo: {
         website: getValue(mapping.website, values),
+        urls: getValue(mapping.urls, values),
         linkedin: getValue(mapping.linkedinUrl || mapping.linkedin, values),
         headquarters: getValue(mapping.location || mapping.headquarters, values),
         founded: getValue(mapping.foundingYear || mapping.founded, values),
@@ -185,6 +186,7 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
         area: getValue(mapping.area, values),
         ventureCapitalFirm: getValue(mapping.ventureCapitalFirm, values),
         location: getValue(mapping.location, values),
+        investmentDate: getValue(mapping.investmentDate, values),
       },
 
       marketInfo: {
@@ -243,6 +245,8 @@ export function parseCSVWithMapping(csvText: string, mapping: ColumnMapping): St
         llm: scoreValue,
         ml: getNumericValue(mapping.machineLearningScore, values) || 0,
         sentiment: 0,
+        xgBoost: getNumericValue(mapping.xgBoost, values),
+        lightGBM: getNumericValue(mapping.lightGBM, values),
       },
 
       rationale: {
@@ -298,8 +302,14 @@ export function suggestMapping(headers: string[]): ColumnMapping {
       mapping.description = originalHeader
     } else if (header === "country") {
       mapping.country = originalHeader
-    } else if (header === "website" || header.includes("website")) {
+    } else if (header === "website" || header === "domain" || header.includes("website")) {
       mapping.website = originalHeader
+    } else if (header === "urls") {
+      mapping.urls = originalHeader
+    } else if (header === "investment date" || header.includes("investment date")) {
+      mapping.investmentDate = originalHeader
+    } else if (header === "status") {
+      mapping.status = originalHeader
     }
 
     // Company info
@@ -395,8 +405,12 @@ export function suggestMapping(headers: string[]): ColumnMapping {
     }
 
     // AI scores & analysis
-    else if (header === "machine learning score" || header === "ml score" || header.includes("ml score")) {
+    else if (header === "machine learning score" || header === "ml score" || header === "ml_score") {
       mapping.machineLearningScore = originalHeader
+    } else if (header === "xg boost" || header === "xgboost") {
+      mapping.xgBoost = originalHeader
+    } else if (header === "lightgbm v2" || header === "lightgbm" || header.includes("lightgbm")) {
+      mapping.lightGBM = originalHeader
     } else if (header === "arconic llm rules" || header.includes("llm rules")) {
       mapping.arconicLlmRules = originalHeader
     } else if (header === "investment score overview" || header.includes("investment score")) {
@@ -419,10 +433,10 @@ export function suggestMapping(headers: string[]): ColumnMapping {
       mapping.sector = originalHeader
     } else if (header.includes("stage") || header.includes("round")) {
       mapping.stage = originalHeader
-    } else if ((header.includes("llm score") || header.includes("arconic llm")) && !header.includes("ml score")) {
-      // Prioritize LLM Score columns, but skip ML Score columns
+    } else if (header === "llm_score" || header === "llm score" || (header.includes("llm") && header.includes("score"))) {
+      // Prioritize LLM_Score column specifically
       mapping.score = originalHeader
-    } else if (!mapping.score && (header.includes("score") || header.includes("rating")) && !header.includes("machine learning")) {
+    } else if (!mapping.score && (header.includes("score") || header.includes("rating")) && !header.includes("machine learning") && !header.includes("ml")) {
       // Fallback to generic score columns, but only if not already set and not ML score
       mapping.score = originalHeader
     }

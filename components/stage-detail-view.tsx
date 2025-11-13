@@ -14,9 +14,11 @@ interface StageDetailViewProps {
   onBack: () => void
   onSelectStartup: (startup: Startup) => void
   onMoveStartup: (startupId: string, newStage: PipelineStage) => void
+  onToggleShortlist?: (startupId: string, shortlisted: boolean) => void
+  shortlistLoading?: Set<string>
 }
 
-export function StageDetailView({ stage, startups, onBack, onSelectStartup }: StageDetailViewProps) {
+export function StageDetailView({ stage, startups, onBack, onSelectStartup, onToggleShortlist, shortlistLoading }: StageDetailViewProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [sectorFilter, setSectorFilter] = useState<string>("all")
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
@@ -132,7 +134,12 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup }: St
 
       {/* Main Content - Table */}
       <div className="flex-1 overflow-auto p-4">
-        <StartupTable startups={filteredStartups} onSelectStartup={onSelectStartup} />
+        <StartupTable
+          startups={filteredStartups}
+          onSelectStartup={onSelectStartup}
+          onToggleShortlist={onToggleShortlist}
+          shortlistLoading={shortlistLoading}
+        />
       </div>
     </div>
   )

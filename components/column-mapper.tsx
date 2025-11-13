@@ -526,6 +526,18 @@ export function ColumnMapper({ preview, suggestedMapping, onConfirm, onCancel }:
               onChange={(v) => updateMapping("machineLearningScore", v)}
             />
             <MappingField
+              id="xgBoost-mapping"
+              label="XG Boost"
+              value={mapping.xgBoost}
+              onChange={(v) => updateMapping("xgBoost", v)}
+            />
+            <MappingField
+              id="lightGBM-mapping"
+              label="LightGBM v2"
+              value={mapping.lightGBM}
+              onChange={(v) => updateMapping("lightGBM", v)}
+            />
+            <MappingField
               id="llmRules-mapping"
               label="LLM Rules / Analysis"
               value={mapping.arconicLlmRules}
