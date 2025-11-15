@@ -8,7 +8,7 @@ GitHub pushes are not triggering Vercel deployments. The webhook integration is 
 ✅ Authentication system implemented
 ✅ CSV upload fixed (sanitizes unknown fields)
 ✅ Build tested and works perfectly
-✅ All environment variables configured (OPENAI_API_KEY, AUTH_SECRET, DATABASE)
+✅ All environment variables configured (ANTHROPIC_API_KEY, AUTH_SECRET, DATABASE)
 
 ## Quick Fix (5 minutes)
 
@@ -67,7 +67,7 @@ If the above doesn't work:
 2. Import your GitHub repo again as a fresh project
 
 3. Configure these environment variables:
-   - OPENAI_API_KEY
+   - ANTHROPIC_API_KEY
    - AUTH_SECRET
    - POSTGRES_PRISMA_URL
    - POSTGRES_URL_NON_POOLING
@@ -79,7 +79,7 @@ If the above doesn't work:
 ✅ Login/Signup pages with Arconic design
 ✅ CSV upload saves to Postgres database
 ✅ Companies appear on dashboard after upload
-✅ Investment memo generation with OpenAI
+✅ Investment memo generation with Claude Sonnet 4.5
 ✅ All features from localhost working on production
 
 ## Need Help?

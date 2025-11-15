@@ -308,7 +308,7 @@ These errors will **automatically resolve** once you:
 - Database URLs auto-added to environment
 
 ### 2. Configure Environment Variables (5 minutes)
-- Add `OPENAI_API_KEY` to Vercel
+- Add `ANTHROPIC_API_KEY` to Vercel
 - Verify database URLs are present
 
 ### 3. Run Database Migration (5 minutes)
@@ -368,7 +368,7 @@ With 20,000 companies in database:
 ## Security Checklist
 
 - ✅ Database credentials in environment variables
-- ✅ OpenAI API key secured
+- ✅ Anthropic API key secured
 - ✅ `.env*` files in `.gitignore`
 - ✅ SQL injection prevention (via Prisma)
 - ✅ HTTPS enforced by Vercel

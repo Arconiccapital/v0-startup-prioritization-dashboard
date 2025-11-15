@@ -6,7 +6,7 @@ This guide will help you deploy the Startup Prioritization Dashboard to Vercel w
 
 - [Vercel Account](https://vercel.com)
 - [GitHub Account](https://github.com) (repository already created)
-- OpenAI API Key
+- Anthropic API Key
 - CSV file with your 20,000 companies (optional - you can upload via UI)
 
 ## Step 1: Set Up Vercel Postgres Database
@@ -42,12 +42,12 @@ This guide will help you deploy the Startup Prioritization Dashboard to Vercel w
 
 ## Step 2: Configure Environment Variables
 
-### 2.1 Add OpenAI API Key
+### 2.1 Add Anthropic API Key
 
 1. In your Vercel project, go to **"Settings"** → "Environment Variables"
 2. Add the following variable:
    ```
-   OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE
+   ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
    ```
 3. Select all environments (Production, Preview, Development)
 4. Click "Save"
@@ -247,7 +247,7 @@ Go to Vercel Dashboard → Deployments → [Your Deployment] → View Function L
 
 - **Vercel Hobby Plan**: Free (includes 100GB bandwidth)
 - **Vercel Postgres**: ~$20/month (includes 10GB storage, 1M rows, connection pooling)
-- **OpenAI API (GPT-4o-mini)**: ~$0.15 per 1M input tokens, ~$0.60 per 1M output tokens
+- **Anthropic API (Claude Sonnet 4.5)**: ~$3 per 1M input tokens, ~$15 per 1M output tokens
   - Estimate: $5-20/month depending on memo generation usage
 
 ## Troubleshooting
@@ -281,7 +281,7 @@ Vercel Postgres uses connection pooling automatically. If issues persist:
 ## Security Checklist
 
 - ✅ Database credentials in environment variables (not committed to git)
-- ✅ OpenAI API key in environment variables
+- ✅ Anthropic API key in environment variables
 - ✅ `.env*` files in `.gitignore`
 - ✅ Prisma connection pooling enabled
 - ✅ HTTPS enforced by Vercel

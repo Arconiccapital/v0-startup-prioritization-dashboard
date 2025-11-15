@@ -90,7 +90,7 @@ All code is ready. Next step: Deploy to Vercel (see below).
 #### 2. Add Environment Variables
 In Vercel Dashboard → Settings → Environment Variables:
 ```
-OPENAI_API_KEY=sk-proj-YOUR_NEW_KEY_HERE
+ANTHROPIC_API_KEY=sk-ant-YOUR_NEW_KEY_HERE
 ```
 (Database URLs are auto-added by Vercel)
 
@@ -194,8 +194,8 @@ Browser → Next.js API Routes → Prisma Client → Vercel Postgres
 |---------|------|---------|
 | Vercel Hosting | $0-20/mo | Hobby (free) or Pro plan |
 | Vercel Postgres | ~$20/mo | 10GB storage, 1M rows, connection pooling |
-| OpenAI API (GPT-4o-mini) | $5-20/mo | Usage-based, very affordable |
-| **Total** | **$25-60/mo** | Scales to 100k+ companies |
+| Anthropic API (Claude Sonnet 4.5) | $10-50/mo | Usage-based, enterprise-grade AI |
+| **Total** | **$30-90/mo** | Scales to 100k+ companies |
 
 ## Troubleshooting
 
@@ -224,7 +224,7 @@ Check Vercel Function Logs:
 ## Security Checklist
 
 - ✅ Database credentials in environment variables
-- ✅ OpenAI API key secured in environment
+- ✅ Anthropic API key secured in environment
 - ✅ `.env*` files in `.gitignore`
 - ✅ SQL injection prevention (via Prisma)
 - ✅ HTTPS enforced by Vercel

@@ -100,7 +100,7 @@ export async function getAllStartups(options?: {
 
 **Production (Vercel):**
 ```env
-OPENAI_API_KEY=sk-proj-...
+ANTHROPIC_API_KEY=sk-ant-...
 POSTGRES_URL=...
 POSTGRES_PRISMA_URL=...
 POSTGRES_URL_NON_POOLING=...
@@ -108,7 +108,7 @@ POSTGRES_URL_NON_POOLING=...
 
 **Local Development:**
 ```env
-OPENAI_API_KEY=sk-proj-...
+ANTHROPIC_API_KEY=sk-ant-...
 POSTGRES_PRISMA_URL=... (from vercel env pull)
 POSTGRES_URL_NON_POOLING=...
 ```
@@ -206,7 +206,7 @@ Before deployment, verify:
 
 1. **Create Vercel Postgres database** in Vercel dashboard
 2. **Connect database** to your project
-3. **Add OPENAI_API_KEY** environment variable
+3. **Add ANTHROPIC_API_KEY** environment variable
 4. **Run migration**: `npx prisma db push`
 5. **Deploy**: `vercel --prod` or push to main branch
 6. **Upload data**: Via UI or seed script
@@ -250,8 +250,8 @@ However, you'll lose the 20k companies capacity.
 ### After Migration (production)
 - **Vercel Hosting**: $0-20/month (Hobby or Pro plan)
 - **Vercel Postgres**: ~$20/month (10GB storage, 1M rows)
-- **OpenAI API**: $5-20/month (usage-based)
-- **Total**: **~$25-60/month**
+- **Anthropic API (Claude Sonnet 4.5)**: $10-50/month (usage-based)
+- **Total**: **~$30-90/month**
 
 Scales to hundreds of thousands of companies without significant cost increase.
 
