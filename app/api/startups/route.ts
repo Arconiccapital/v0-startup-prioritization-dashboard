@@ -68,20 +68,39 @@ export async function GET(request: NextRequest) {
       // Exclude large JSON fields and relations for performance
     } : undefined
 
-    const startups = await prisma.startup.findMany({
+    // Build query options based on whether we're using select or include
+    // Note: Prisma doesn't allow using both select and include together
+    let queryOptions: any = {
       where,
       orderBy: { rank: "asc" },
       skip,
       take: limit,
-      select: selectFields,
-      include: limit <= 1000 ? {
-        thresholdIssues: true,
-      } : undefined,
-    })
+    }
 
-    // If user is logged in, add their shortlist status to each startup
-    let startupsWithShortlist = startups
-    if (userId) {
+    if (selectFields) {
+      // For large datasets (limit > 1000), use select for minimal fields
+      queryOptions.select = selectFields
+    } else {
+      // For smaller datasets (limit <= 1000), use include to load relations
+      queryOptions.include = {
+        thresholdIssues: true,
+        // Optimize: Load shortlist status in same query using LEFT JOIN
+        ...(userId && {
+          shortlistedBy: {
+            where: { userId },
+            select: { userId: true },
+          },
+        }),
+      }
+    }
+
+    const startups = await prisma.startup.findMany(queryOptions)
+
+    // For large datasets, we need a separate query for shortlist data
+    // For small datasets, it's already included via the join above
+    let startupsWithShortlist
+    if (selectFields && userId) {
+      // Large dataset path: use the original 2-query approach
       const shortlistIds = await prisma.userShortlist.findMany({
         where: {
           userId,
@@ -91,16 +110,16 @@ export async function GET(request: NextRequest) {
       })
 
       const shortlistedSet = new Set(shortlistIds.map((s) => s.startupId))
-
       startupsWithShortlist = startups.map((startup) => ({
         ...startup,
         shortlisted: shortlistedSet.has(startup.id),
       }))
     } else {
-      // Not logged in - all are not shortlisted
-      startupsWithShortlist = startups.map((startup) => ({
+      // Small dataset path: shortlist data already loaded via include
+      startupsWithShortlist = startups.map((startup: any) => ({
         ...startup,
-        shortlisted: false,
+        shortlisted: userId ? (startup.shortlistedBy?.length > 0) : false,
+        shortlistedBy: undefined, // Remove the relation data, only keep the boolean
       }))
     }
 
@@ -165,24 +184,28 @@ function sanitizeStartupData(data: any) {
 }
 
 // Helper function to recalculate all ranks based on LLM scores
+// Uses optimized SQL with a single UPDATE query instead of N individual updates
 async function recalculateRanks() {
-  // Get all startups sorted by LLM score (descending)
-  const allStartups = await prisma.startup.findMany({
-    orderBy: [
-      { score: "desc" }, // Primary sort by overall score
-      { name: "asc" }, // Tie-breaker
-    ],
-  })
+  console.log("[API] Recalculating ranks with optimized SQL...")
+  const startTime = Date.now()
 
-  // Update ranks
-  for (let i = 0; i < allStartups.length; i++) {
-    await prisma.startup.update({
-      where: { id: allStartups[i].id },
-      data: { rank: i + 1 },
-    })
-  }
+  // Use raw SQL for much faster bulk update (single query instead of N updates)
+  // This creates a CTE (Common Table Expression) that assigns row numbers based on score
+  await prisma.$executeRaw`
+    UPDATE "Startup"
+    SET rank = ranked.new_rank
+    FROM (
+      SELECT
+        id,
+        ROW_NUMBER() OVER (ORDER BY score DESC, name ASC) as new_rank
+      FROM "Startup"
+    ) AS ranked
+    WHERE "Startup".id = ranked.id
+  `
 
-  console.log(`[API] Recalculated ranks for ${allStartups.length} startups`)
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+  const totalCount = await prisma.startup.count()
+  console.log(`[API] ✓ Recalculated ranks for ${totalCount} startups in ${duration}s`)
 }
 
 // POST /api/startups - Create new startup(s)
