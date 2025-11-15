@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
       rank: true,
       pipelineStage: true,
       aiScores: true,
+      companyInfo: true, // Include for LinkedIn links
       // Exclude large JSON fields and relations for performance
     } : undefined
 

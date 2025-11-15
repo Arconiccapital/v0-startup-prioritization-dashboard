@@ -76,7 +76,7 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
   const rowVirtualizer = useVirtualizer({
     count: sortedStartups.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 73, // Estimated row height in pixels
+    estimateSize: () => 100, // Estimated row height in pixels (increased for 3-line descriptions)
     overscan: 10, // Render 10 extra rows above/below viewport for smooth scrolling
   })
 
@@ -233,9 +233,21 @@ export function StartupTable({ startups, onSelectStartup, onToggleShortlist, sho
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[300px] max-w-[500px]" onClick={() => onSelectStartup(startup)}>
-                        <div className="overflow-hidden">
-                          <div className="font-medium text-foreground text-sm truncate">{startup.name}</div>
-                          <div className="text-xs text-muted-foreground line-clamp-1">{startup.description}</div>
+                        <div className="py-1 max-w-full">
+                          {startup.companyInfo?.linkedin ? (
+                            <a
+                              href={startup.companyInfo.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium text-foreground text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors block mb-1 truncate"
+                            >
+                              {startup.name}
+                            </a>
+                          ) : (
+                            <div className="font-medium text-foreground text-sm mb-1 truncate">{startup.name}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground line-clamp-2">{startup.description}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right" onClick={() => onSelectStartup(startup)}>
