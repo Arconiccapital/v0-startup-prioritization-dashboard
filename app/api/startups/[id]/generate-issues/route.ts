@@ -104,7 +104,7 @@ Return ONLY valid JSON (no markdown, no code blocks) in this exact format:
 If no genuine risks are identified, return: {"issues": []}`
 
     const completion = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,
       temperature: 0.3, // Lower temperature for more consistent analysis
       system:
