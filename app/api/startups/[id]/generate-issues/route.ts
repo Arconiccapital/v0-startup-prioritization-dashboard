@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import OpenAI from "openai"
+import Anthropic from "@anthropic-ai/sdk"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
 })
 
 // POST /api/startups/[id]/generate-issues - Generate threshold issues from scorecard commentary
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     console.log(`[Generate Issues] Analyzing ${allCommentary.length} comments for startup: ${startup.name}`)
 
-    // Use GPT-4o to analyze commentary and extract threshold issues
+    // Use Claude Sonnet 4 to analyze commentary and extract threshold issues
     const prompt = `You are an expert venture capital analyst. Analyze the following investment scorecard commentary for "${startup.name}" and identify **deal breakers and critical red flags** that would take you out of investing entirely or require extraordinary resolution.
 
 For each identified issue, provide:
@@ -103,35 +103,33 @@ Return ONLY valid JSON (no markdown, no code blocks) in this exact format:
 
 If no genuine risks are identified, return: {"issues": []}`
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const completion = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      temperature: 0.3, // Lower temperature for more consistent analysis
+      system:
+        "You are a venture capital analyst expert at identifying deal-breaking red flags and critical threshold issues that would prevent investment. Be highly selective - only flag serious issues that would genuinely cause you to pass on the deal. Return only valid JSON.",
       messages: [
-        {
-          role: "system",
-          content:
-            "You are a venture capital analyst expert at identifying deal-breaking red flags and critical threshold issues that would prevent investment. Be highly selective - only flag serious issues that would genuinely cause you to pass on the deal. Return only valid JSON.",
-        },
         {
           role: "user",
           content: prompt,
         },
       ],
-      temperature: 0.3, // Lower temperature for more consistent analysis
     })
 
-    const responseText = completion.choices[0]?.message?.content?.trim()
+    const responseText = completion.content[0]?.type === "text" ? completion.content[0].text.trim() : ""
     if (!responseText) {
-      throw new Error("Empty response from GPT-4o")
+      throw new Error("Empty response from Claude Sonnet 4")
     }
 
-    console.log(`[Generate Issues] GPT-4o response: ${responseText.substring(0, 200)}...`)
+    console.log(`[Generate Issues] Claude Sonnet 4 response: ${responseText.substring(0, 200)}...`)
 
     // Parse the response
     let parsedResponse: { issues: any[] }
     try {
       parsedResponse = JSON.parse(responseText)
     } catch (parseError) {
-      console.error("[Generate Issues] Failed to parse GPT-4o response:", responseText)
+      console.error("[Generate Issues] Failed to parse Claude Sonnet 4 response:", responseText)
       throw new Error("Invalid JSON response from AI model")
     }
 

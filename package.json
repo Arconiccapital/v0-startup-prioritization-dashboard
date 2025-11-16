@@ -10,7 +10,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.44",
     "@ai-sdk/openai": "^2.0.53",
+    "@anthropic-ai/sdk": "^0.69.0",
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.18.0",
