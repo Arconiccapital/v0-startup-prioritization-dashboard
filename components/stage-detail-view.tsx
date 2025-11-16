@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { StartupTable } from "@/components/startup-table"
+import { exportAndDownload } from "@/lib/csv-export"
+import { Download } from "lucide-react"
 
 interface StageDetailViewProps {
   stage: PipelineStage
@@ -52,6 +54,11 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup, onTo
 
     return filtered
   }, [stageStartups, searchQuery, sectorFilter, scoreRange])
+
+  const handleExportCSV = () => {
+    const filename = `${stage.toLowerCase().replace(/\s+/g, "-")}-companies-${new Date().toISOString().split("T")[0]}.csv`
+    exportAndDownload(filteredStartups, filename)
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -128,6 +135,12 @@ export function StageDetailView({ stage, startups, onBack, onSelectStartup, onTo
             }}
           >
             Reset Filters
+          </Button>
+
+          {/* Export CSV */}
+          <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleExportCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
           </Button>
         </div>
       </div>

@@ -12,6 +12,8 @@ import { CsvUpload } from "@/components/csv-upload"
 import type { Startup, PipelineStage } from "@/lib/types"
 import Image from "next/image"
 import { getAllStartups, addUploadedStartups } from "@/lib/startup-storage"
+import { exportAndDownload } from "@/lib/csv-export"
+import { Download } from "lucide-react"
 
 export default function Home() {
   const [startups, setStartups] = useState<Startup[]>([])
@@ -310,6 +312,13 @@ export default function Home() {
     setKeywordField("all")
   }
 
+  const handleExportCSV = () => {
+    const filename = showOnlyShortlisted
+      ? `shortlisted-companies-${new Date().toISOString().split("T")[0]}.csv`
+      : `all-companies-${new Date().toISOString().split("T")[0]}.csv`
+    exportAndDownload(filteredStartups, filename)
+  }
+
   // Filter startups by shortlist status and keyword (client-side)
   const filteredStartups = useMemo(() => {
     let filtered = startups
@@ -602,6 +611,14 @@ export default function Home() {
           >
             ⭐ My Shortlist
           </Button>
+
+          {/* Export CSV - Show in table view */}
+          {viewMode === "table" && (
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9">
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          )}
 
           {/* Reset Button */}
           {(sectorFilter ||
