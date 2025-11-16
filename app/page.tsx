@@ -26,6 +26,7 @@ export default function Home() {
   const [stageFilter, setStageFilter] = useState<string>("")
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
   const [keywordFilter, setKeywordFilter] = useState<string>("")
+  const [keywordField, setKeywordField] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(false)
   const [showOnlyShortlisted, setShowOnlyShortlisted] = useState(false)
   const [shortlistLoading, setShortlistLoading] = useState<Set<string>>(new Set())
@@ -306,6 +307,7 @@ export default function Home() {
     setScoreRange([0, 100])
     setShowOnlyShortlisted(false)
     setKeywordFilter("")
+    setKeywordField("all")
   }
 
   // Filter startups by shortlist status and keyword (client-side)
@@ -317,32 +319,51 @@ export default function Home() {
       filtered = filtered.filter((s) => s.shortlisted)
     }
 
-    // Filter by keyword in description and other text fields
+    // Filter by keyword in selected field
     if (keywordFilter) {
       const keyword = keywordFilter.toLowerCase()
       filtered = filtered.filter((s) => {
-        const description = (s.description || "").toLowerCase()
-        const sector = (s.sector || "").toLowerCase()
-        const name = (s.name || "").toLowerCase()
         const companyInfo = s.companyInfo as any
         const marketInfo = s.marketInfo as any
         const productInfo = s.productInfo as any
 
-        return (
-          description.includes(keyword) ||
-          sector.includes(keyword) ||
-          name.includes(keyword) ||
-          (companyInfo?.website || "").toLowerCase().includes(keyword) ||
-          (marketInfo?.industry || "").toLowerCase().includes(keyword) ||
-          (marketInfo?.subIndustry || "").toLowerCase().includes(keyword) ||
-          (productInfo?.problemSolved || "").toLowerCase().includes(keyword) ||
-          (productInfo?.moat || "").toLowerCase().includes(keyword)
-        )
+        // Search in specific field or all fields
+        switch (keywordField) {
+          case "name":
+            return (s.name || "").toLowerCase().includes(keyword)
+          case "description":
+            return (s.description || "").toLowerCase().includes(keyword)
+          case "sector":
+            return (s.sector || "").toLowerCase().includes(keyword)
+          case "website":
+            return (companyInfo?.website || "").toLowerCase().includes(keyword)
+          case "industry":
+            return (marketInfo?.industry || "").toLowerCase().includes(keyword)
+          case "subIndustry":
+            return (marketInfo?.subIndustry || "").toLowerCase().includes(keyword)
+          case "problemSolved":
+            return (productInfo?.problemSolved || "").toLowerCase().includes(keyword)
+          case "moat":
+            return (productInfo?.moat || "").toLowerCase().includes(keyword)
+          case "all":
+          default:
+            // Search across all fields
+            return (
+              (s.name || "").toLowerCase().includes(keyword) ||
+              (s.description || "").toLowerCase().includes(keyword) ||
+              (s.sector || "").toLowerCase().includes(keyword) ||
+              (companyInfo?.website || "").toLowerCase().includes(keyword) ||
+              (marketInfo?.industry || "").toLowerCase().includes(keyword) ||
+              (marketInfo?.subIndustry || "").toLowerCase().includes(keyword) ||
+              (productInfo?.problemSolved || "").toLowerCase().includes(keyword) ||
+              (productInfo?.moat || "").toLowerCase().includes(keyword)
+            )
+        }
       })
     }
 
     return filtered
-  }, [startups, showOnlyShortlisted, keywordFilter])
+  }, [startups, showOnlyShortlisted, keywordFilter, keywordField])
 
   if (showUpload) {
     return (
@@ -508,29 +529,32 @@ export default function Home() {
 
           {/* Keyword Filter - Show in table view */}
           {viewMode === "table" && (
-            <div className="w-[180px]">
-              <select
-                value={keywordFilter}
-                onChange={(e) => setKeywordFilter(e.target.value)}
-                className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
-              >
-                <option value="">Contains...</option>
-                <option value="AI">AI</option>
-                <option value="machine learning">Machine Learning</option>
-                <option value="SaaS">SaaS</option>
-                <option value="B2B">B2B</option>
-                <option value="B2C">B2C</option>
-                <option value="blockchain">Blockchain</option>
-                <option value="crypto">Crypto</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="fintech">Fintech</option>
-                <option value="marketplace">Marketplace</option>
-                <option value="platform">Platform</option>
-                <option value="API">API</option>
-                <option value="mobile">Mobile</option>
-                <option value="cloud">Cloud</option>
-                <option value="data">Data</option>
-              </select>
+            <div className="flex gap-2">
+              <div className="w-[160px]">
+                <select
+                  value={keywordField}
+                  onChange={(e) => setKeywordField(e.target.value)}
+                  className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
+                >
+                  <option value="all">All Fields</option>
+                  <option value="name">Name</option>
+                  <option value="description">Description</option>
+                  <option value="sector">Sector</option>
+                  <option value="website">Website</option>
+                  <option value="industry">Industry</option>
+                  <option value="subIndustry">Sub-Industry</option>
+                  <option value="problemSolved">Problem Solved</option>
+                  <option value="moat">Moat</option>
+                </select>
+              </div>
+              <div className="w-[180px]">
+                <Input
+                  placeholder="Type keyword..."
+                  value={keywordFilter}
+                  onChange={(e) => setKeywordFilter(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
             </div>
           )}
 
