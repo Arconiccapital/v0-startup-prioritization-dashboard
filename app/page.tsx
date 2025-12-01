@@ -4,16 +4,18 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
 import { KanbanBoard } from "@/components/kanban-board"
 import { StageDetailView } from "@/components/stage-detail-view"
 import { StartupTable } from "@/components/startup-table"
 import { CsvUpload } from "@/components/csv-upload"
+import { FilterPanel } from "@/components/filter-panel"
 import type { Startup, PipelineStage } from "@/lib/types"
+import type { FilterCondition, SavedFilter } from "@/lib/filter-store"
+import { getSavedFilters, applyFilters } from "@/lib/filter-store"
 import Image from "next/image"
 import { getAllStartups, addUploadedStartups } from "@/lib/startup-storage"
 import { exportAndDownload } from "@/lib/csv-export"
-import { Download } from "lucide-react"
+import { Download, PanelLeftClose, PanelLeft } from "lucide-react"
 
 export default function Home() {
   const [startups, setStartups] = useState<Startup[]>([])
@@ -23,16 +25,23 @@ export default function Home() {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; status?: string } | null>(null)
   const [limit, setLimit] = useState<number>(500)
   const [totalCount, setTotalCount] = useState<number>(0)
-  const [sectorFilter, setSectorFilter] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [stageFilter, setStageFilter] = useState<string>("")
-  const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100])
-  const [keywordFilter, setKeywordFilter] = useState<string>("")
-  const [keywordField, setKeywordField] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(false)
   const [showOnlyShortlisted, setShowOnlyShortlisted] = useState(false)
   const [shortlistLoading, setShortlistLoading] = useState<Set<string>>(new Set())
+
+  // Filter panel state
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const [activeFilterIds, setActiveFilterIds] = useState<string[]>([])
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+
   const router = useRouter()
+
+  // Load saved filters on mount
+  useEffect(() => {
+    setSavedFilters(getSavedFilters())
+  }, [])
 
   useEffect(() => {
     async function loadStartups() {
@@ -40,11 +49,8 @@ export default function Home() {
       try {
         const { startups, pagination } = await getAllStartups({
           limit,
-          sector: sectorFilter || undefined,
           search: searchQuery || undefined,
           pipelineStage: stageFilter || undefined,
-          minScore: scoreRange[0] > 0 ? scoreRange[0] : undefined,
-          maxScore: scoreRange[1] < 100 ? scoreRange[1] : undefined,
         })
         setStartups(startups)
         setTotalCount(pagination?.total || 0)
@@ -53,7 +59,7 @@ export default function Home() {
       }
     }
     loadStartups()
-  }, [limit, sectorFilter, searchQuery, stageFilter, scoreRange])
+  }, [limit, searchQuery, stageFilter])
 
   const handleUploadComplete = async (uploadedStartups: Startup[]) => {
     try {
@@ -176,10 +182,12 @@ export default function Home() {
     setViewMode("table")
     setLimit(5000) // Load 5K companies initially (faster), user can increase if needed
     setStageFilter("") // Clear stage filter to show all companies
+    setShowFilterPanel(true) // Show filter panel in table view
   }
 
   const handleSwitchToKanbanView = () => {
     setViewMode("kanban")
+    setShowFilterPanel(false) // Hide filter panel in kanban view
   }
 
   const handleToggleShortlist = async (startupId: string, shortlisted: boolean) => {
@@ -285,11 +293,21 @@ export default function Home() {
     }
   }
 
-  // Get unique sectors and pipeline stages for filters
-  const uniqueSectors = useMemo(() => {
-    const sectors = new Set(startups.map((s) => s.sector).filter(Boolean))
-    return Array.from(sectors).sort()
-  }, [startups])
+  // Handle Ask AI filter
+  const handleAskAI = async (query: string): Promise<FilterCondition[]> => {
+    const response = await fetch("/api/filter-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to process AI query")
+    }
+
+    const data = await response.json()
+    return data.conditions
+  }
 
   const PIPELINE_STAGES: PipelineStage[] = [
     "Deal Flow",
@@ -303,13 +321,10 @@ export default function Home() {
   ]
 
   const handleResetFilters = () => {
-    setSectorFilter("")
     setSearchQuery("")
     setStageFilter("")
-    setScoreRange([0, 100])
     setShowOnlyShortlisted(false)
-    setKeywordFilter("")
-    setKeywordField("all")
+    setActiveFilterIds([])
   }
 
   const handleExportCSV = () => {
@@ -319,7 +334,7 @@ export default function Home() {
     exportAndDownload(filteredStartups, filename)
   }
 
-  // Filter startups by shortlist status and keyword (client-side)
+  // Filter startups by shortlist status, keyword, and custom filters (client-side)
   const filteredStartups = useMemo(() => {
     let filtered = startups
 
@@ -328,51 +343,14 @@ export default function Home() {
       filtered = filtered.filter((s) => s.shortlisted)
     }
 
-    // Filter by keyword in selected field
-    if (keywordFilter) {
-      const keyword = keywordFilter.toLowerCase()
-      filtered = filtered.filter((s) => {
-        const companyInfo = s.companyInfo as any
-        const marketInfo = s.marketInfo as any
-        const productInfo = s.productInfo as any
-
-        // Search in specific field or all fields
-        switch (keywordField) {
-          case "name":
-            return (s.name || "").toLowerCase().includes(keyword)
-          case "description":
-            return (s.description || "").toLowerCase().includes(keyword)
-          case "sector":
-            return (s.sector || "").toLowerCase().includes(keyword)
-          case "website":
-            return (companyInfo?.website || "").toLowerCase().includes(keyword)
-          case "industry":
-            return (marketInfo?.industry || "").toLowerCase().includes(keyword)
-          case "subIndustry":
-            return (marketInfo?.subIndustry || "").toLowerCase().includes(keyword)
-          case "problemSolved":
-            return (productInfo?.problemSolved || "").toLowerCase().includes(keyword)
-          case "moat":
-            return (productInfo?.moat || "").toLowerCase().includes(keyword)
-          case "all":
-          default:
-            // Search across all fields
-            return (
-              (s.name || "").toLowerCase().includes(keyword) ||
-              (s.description || "").toLowerCase().includes(keyword) ||
-              (s.sector || "").toLowerCase().includes(keyword) ||
-              (companyInfo?.website || "").toLowerCase().includes(keyword) ||
-              (marketInfo?.industry || "").toLowerCase().includes(keyword) ||
-              (marketInfo?.subIndustry || "").toLowerCase().includes(keyword) ||
-              (productInfo?.problemSolved || "").toLowerCase().includes(keyword) ||
-              (productInfo?.moat || "").toLowerCase().includes(keyword)
-            )
-        }
-      })
+    // Apply custom filters from filter panel
+    if (activeFilterIds.length > 0) {
+      const currentFilters = getSavedFilters()
+      filtered = applyFilters(filtered, activeFilterIds, currentFilters)
     }
 
     return filtered
-  }, [startups, showOnlyShortlisted, keywordFilter, keywordField])
+  }, [startups, showOnlyShortlisted, activeFilterIds])
 
   if (showUpload) {
     return (
@@ -510,8 +488,30 @@ export default function Home() {
       {/* Filter Bar */}
       <div className="border-b border-border bg-card px-6 py-3">
         <div className="flex flex-wrap items-center gap-3">
+          {/* Filter Panel Toggle - Show in table view */}
+          {viewMode === "table" && (
+            <Button
+              variant={showFilterPanel ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              className="h-9"
+            >
+              {showFilterPanel ? (
+                <PanelLeftClose className="w-4 h-4 mr-2" />
+              ) : (
+                <PanelLeft className="w-4 h-4 mr-2" />
+              )}
+              Filters
+              {activeFilterIds.length > 0 && (
+                <span className="ml-1.5 bg-primary-foreground text-primary rounded-full px-1.5 py-0.5 text-xs">
+                  {activeFilterIds.length}
+                </span>
+              )}
+            </Button>
+          )}
+
           {/* Search */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-[200px] max-w-md">
             <Input
               placeholder="Search companies..."
               value={searchQuery}
@@ -519,53 +519,6 @@ export default function Home() {
               className="h-9 text-sm"
             />
           </div>
-
-          {/* Sector Filter */}
-          <div className="w-[180px]">
-            <select
-              value={sectorFilter}
-              onChange={(e) => setSectorFilter(e.target.value)}
-              className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
-            >
-              <option value="">All Sectors</option>
-              {uniqueSectors.map((sector) => (
-                <option key={sector} value={sector}>
-                  {sector}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Keyword Filter - Show in table view */}
-          {viewMode === "table" && (
-            <div className="flex gap-2">
-              <div className="w-[160px]">
-                <select
-                  value={keywordField}
-                  onChange={(e) => setKeywordField(e.target.value)}
-                  className="w-full h-9 text-sm border border-border rounded px-3 bg-background"
-                >
-                  <option value="all">All Fields</option>
-                  <option value="name">Name</option>
-                  <option value="description">Description</option>
-                  <option value="sector">Sector</option>
-                  <option value="website">Website</option>
-                  <option value="industry">Industry</option>
-                  <option value="subIndustry">Sub-Industry</option>
-                  <option value="problemSolved">Problem Solved</option>
-                  <option value="moat">Moat</option>
-                </select>
-              </div>
-              <div className="w-[180px]">
-                <Input
-                  placeholder="Type keyword..."
-                  value={keywordFilter}
-                  onChange={(e) => setKeywordFilter(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Pipeline Stage Filter - Only show in Kanban view */}
           {viewMode === "kanban" && (
@@ -582,23 +535,6 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-            </div>
-          )}
-
-          {/* Score Range Slider - Show in table view */}
-          {viewMode === "table" && (
-            <div className="w-[240px] space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Score: {scoreRange[0]} - {scoreRange[1]}
-              </label>
-              <Slider
-                min={0}
-                max={100}
-                step={1}
-                value={scoreRange}
-                onValueChange={(value) => setScoreRange(value as [number, number])}
-                className="w-full"
-              />
             </div>
           )}
 
@@ -621,13 +557,10 @@ export default function Home() {
           )}
 
           {/* Reset Button */}
-          {(sectorFilter ||
-            searchQuery ||
+          {(searchQuery ||
             stageFilter ||
-            scoreRange[0] > 0 ||
-            scoreRange[1] < 100 ||
             showOnlyShortlisted ||
-            keywordFilter) && (
+            activeFilterIds.length > 0) && (
             <Button variant="outline" size="sm" onClick={handleResetFilters} className="h-9">
               Reset Filters
             </Button>
@@ -635,7 +568,7 @@ export default function Home() {
         </div>
       </div>
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden flex">
         {isLoading && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
@@ -644,23 +577,36 @@ export default function Home() {
             </div>
           </div>
         )}
-        {viewMode === "kanban" ? (
-          <KanbanBoard
-            startups={filteredStartups}
-            onSelectStartup={handleSelectStartup}
-            onMoveStartup={handleMoveStartup}
-            onViewStage={handleViewStage}
+
+        {/* Filter Panel - Show in table view when toggled */}
+        {viewMode === "table" && showFilterPanel && (
+          <FilterPanel
+            activeFilterIds={activeFilterIds}
+            onActiveFiltersChange={setActiveFilterIds}
+            onAskAI={handleAskAI}
           />
-        ) : (
-          <div className="h-full p-6">
-            <StartupTable
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden">
+          {viewMode === "kanban" ? (
+            <KanbanBoard
               startups={filteredStartups}
               onSelectStartup={handleSelectStartup}
-              onToggleShortlist={handleToggleShortlist}
-              shortlistLoading={shortlistLoading}
+              onMoveStartup={handleMoveStartup}
+              onViewStage={handleViewStage}
             />
-          </div>
-        )}
+          ) : (
+            <div className="h-full p-6">
+              <StartupTable
+                startups={filteredStartups}
+                onSelectStartup={handleSelectStartup}
+                onToggleShortlist={handleToggleShortlist}
+                shortlistLoading={shortlistLoading}
+              />
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )

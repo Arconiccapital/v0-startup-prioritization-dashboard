@@ -14,6 +14,7 @@ export default auth((req) => {
     "/api/shortlist", // Handles its own authentication
     "/api/enrich",
     "/api/ai-assistant",
+    "/api/filter-ai", // AI filter endpoint
   ]
 
   // Check if current path is public
