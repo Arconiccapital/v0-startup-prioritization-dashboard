@@ -15,6 +15,9 @@ export default auth((req) => {
     "/api/enrich",
     "/api/ai-assistant",
     "/api/filter-ai", // AI filter endpoint
+    "/api/generate-outreach", // Founder outreach message generation
+    "/api/portfolio", // Portfolio management endpoints
+    "/api/founders", // Founders list endpoint
   ]
 
   // Check if current path is public

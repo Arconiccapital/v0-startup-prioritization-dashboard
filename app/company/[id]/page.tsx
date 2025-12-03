@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, FileText, ExternalLink, Trash2, Pencil } from "lucide-react"
+import { ArrowLeft, FileText, ExternalLink, Trash2, Pencil, Loader2, Copy, Check, Mail, MessageSquare, Calendar } from "lucide-react"
+import type { OutreachMessages, OutreachTone } from "@/lib/outreach-generator"
 import { getStartupById } from "@/lib/startup-storage"
 import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
 import type { PipelineStage, ThresholdIssue } from "@/lib/types"
@@ -106,6 +107,12 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   const [transcriptText, setTranscriptText] = useState("")
   const [showPitchDeckInput, setShowPitchDeckInput] = useState(false)
   const [pitchDeckFile, setPitchDeckFile] = useState<File | null>(null)
+
+  // State for outreach messages
+  const [outreachTone, setOutreachTone] = useState<OutreachTone>("friendly")
+  const [outreachMessages, setOutreachMessages] = useState<OutreachMessages | null>(null)
+  const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false)
+  const [copiedMessageType, setCopiedMessageType] = useState<string | null>(null)
 
   const [assessmentScores, setAssessmentScores] = useState({
     marketOpportunity: 0,
@@ -661,6 +668,48 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     alert("Initial assessment saved successfully!")
   }
 
+  // Outreach message generation handlers
+  const handleGenerateOutreach = async () => {
+    if (!startup) return
+
+    setIsGeneratingOutreach(true)
+    setOutreachMessages(null)
+
+    try {
+      console.log("[Outreach] Generating messages for:", startup.name, "with tone:", outreachTone)
+
+      const response = await fetch("/api/generate-outreach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startup, tone: outreachTone }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to generate outreach messages")
+      }
+
+      const { messages } = await response.json()
+      setOutreachMessages(messages)
+      console.log("[Outreach] Messages generated successfully")
+    } catch (error) {
+      console.error("[Outreach] Error generating messages:", error)
+      alert(`Failed to generate outreach messages: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsGeneratingOutreach(false)
+    }
+  }
+
+  const handleCopyMessage = async (messageType: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageType(messageType)
+      setTimeout(() => setCopiedMessageType(null), 2000)
+    } catch (error) {
+      console.error("[Outreach] Failed to copy:", error)
+    }
+  }
+
   const handleUploadTranscript = async () => {
     if (!transcriptText.trim()) {
       alert("Please enter transcript text")
@@ -1132,6 +1181,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
             <TabsTrigger value="scorecard">Investment Scorecard</TabsTrigger>
             <TabsTrigger value="issues">Threshold Issues</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="outreach">Outreach</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -2609,6 +2659,211 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* Outreach Tab */}
+          <TabsContent value="outreach">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-semibold">Founder Outreach Messages</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    AI-generated personalized messages for founder outreach
+                  </p>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="tone" className="text-sm font-medium">Tone:</Label>
+                  <Select value={outreachTone} onValueChange={(value: OutreachTone) => setOutreachTone(value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formal">Formal</SelectItem>
+                      <SelectItem value="friendly">Friendly</SelectItem>
+                      <SelectItem value="direct">Direct</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={handleGenerateOutreach}
+                  disabled={isGeneratingOutreach}
+                  className="gap-2"
+                >
+                  {isGeneratingOutreach ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4" />
+                      Generate Messages
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Generated Messages */}
+              {outreachMessages && (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Cold Email */}
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                        <h4 className="font-semibold">Cold Email</h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyMessage("coldEmail", `Subject: ${outreachMessages.coldEmail.subject}\n\n${outreachMessages.coldEmail.body}`)}
+                        className="gap-1"
+                      >
+                        {copiedMessageType === "coldEmail" ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="bg-muted/50 rounded p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Subject:</div>
+                      <div className="text-sm font-medium mb-3">{outreachMessages.coldEmail.subject}</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Body:</div>
+                      <div className="text-sm whitespace-pre-wrap">{outreachMessages.coldEmail.body}</div>
+                    </div>
+                  </div>
+
+                  {/* LinkedIn Message */}
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                        <h4 className="font-semibold">LinkedIn Message</h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyMessage("linkedin", outreachMessages.linkedin.body)}
+                        className="gap-1"
+                      >
+                        {copiedMessageType === "linkedin" ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="bg-muted/50 rounded p-3">
+                      <div className="text-sm whitespace-pre-wrap">{outreachMessages.linkedin.body}</div>
+                    </div>
+                  </div>
+
+                  {/* Follow-up Email */}
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-orange-600" />
+                        <h4 className="font-semibold">Follow-up Email</h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyMessage("followUp", `Subject: ${outreachMessages.followUp.subject}\n\n${outreachMessages.followUp.body}`)}
+                        className="gap-1"
+                      >
+                        {copiedMessageType === "followUp" ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="bg-muted/50 rounded p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Subject:</div>
+                      <div className="text-sm font-medium mb-3">{outreachMessages.followUp.subject}</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Body:</div>
+                      <div className="text-sm whitespace-pre-wrap">{outreachMessages.followUp.body}</div>
+                    </div>
+                  </div>
+
+                  {/* Meeting Request */}
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-green-600" />
+                        <h4 className="font-semibold">Meeting Request</h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyMessage("meetingRequest", `Subject: ${outreachMessages.meetingRequest.subject}\n\n${outreachMessages.meetingRequest.body}`)}
+                        className="gap-1"
+                      >
+                        {copiedMessageType === "meetingRequest" ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="bg-muted/50 rounded p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Subject:</div>
+                      <div className="text-sm font-medium mb-3">{outreachMessages.meetingRequest.subject}</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Body:</div>
+                      <div className="text-sm whitespace-pre-wrap">{outreachMessages.meetingRequest.body}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!outreachMessages && !isGeneratingOutreach && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No messages generated yet</p>
+                  <p className="text-sm">Select a tone and click "Generate Messages" to create personalized outreach messages</p>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {isGeneratingOutreach && (
+                <div className="text-center py-12">
+                  <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
+                  <p className="text-lg font-medium mb-2">Generating outreach messages...</p>
+                  <p className="text-sm text-muted-foreground">Creating personalized messages based on company profile</p>
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>

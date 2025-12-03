@@ -2,8 +2,11 @@
 
 import type React from "react"
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import type { Startup, PipelineStage } from "@/lib/types"
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Briefcase } from "lucide-react"
 
 const PIPELINE_STAGES: PipelineStage[] = [
   "Deal Flow",
@@ -21,9 +24,19 @@ interface KanbanBoardProps {
   onSelectStartup: (startup: Startup) => void
   onMoveStartup: (startupId: string, newStage: PipelineStage) => void
   onViewStage: (stage: PipelineStage) => void
+  onMoveToPortfolio?: (startup: Startup) => void // New: called when moving to Closed
+  portfolioInvestmentIds?: string[] // New: startupIds that have portfolio investments
 }
 
-export function KanbanBoard({ startups, onSelectStartup, onMoveStartup, onViewStage }: KanbanBoardProps) {
+export function KanbanBoard({
+  startups,
+  onSelectStartup,
+  onMoveStartup,
+  onViewStage,
+  onMoveToPortfolio,
+  portfolioInvestmentIds = []
+}: KanbanBoardProps) {
+  const router = useRouter()
   const [draggedStartup, setDraggedStartup] = useState<string | null>(null)
 
   // Memoize startups by stage to avoid filtering 8 times on every render
@@ -64,7 +77,15 @@ export function KanbanBoard({ startups, onSelectStartup, onMoveStartup, onViewSt
 
   const handleDrop = (stage: PipelineStage) => {
     if (draggedStartup) {
-      onMoveStartup(draggedStartup, stage)
+      // If dropping on "Closed" stage and we have the portfolio callback, trigger it
+      if (stage === "Closed" && onMoveToPortfolio) {
+        const startup = startups.find(s => s.id === draggedStartup)
+        if (startup) {
+          onMoveToPortfolio(startup)
+        }
+      } else {
+        onMoveStartup(draggedStartup, stage)
+      }
       setDraggedStartup(null)
     }
   }
@@ -100,13 +121,29 @@ export function KanbanBoard({ startups, onSelectStartup, onMoveStartup, onViewSt
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto">
-                {stageStartups.map((startup) => (
+                {stageStartups.map((startup) => {
+                  // Check if this startup has a portfolio investment
+                  const hasPortfolioInvestment = portfolioInvestmentIds.includes(startup.id)
+                  const isClosedStage = stage === "Closed"
+
+                  const handleCardClick = () => {
+                    // If in Closed stage and has portfolio investment, navigate to portfolio
+                    if (isClosedStage && hasPortfolioInvestment) {
+                      router.push(`/portfolio/${startup.id}`)
+                    } else {
+                      onSelectStartup(startup)
+                    }
+                  }
+
+                  return (
                   <Card
                     key={startup.id}
                     draggable
                     onDragStart={() => handleDragStart(startup.id)}
-                    onClick={() => onSelectStartup(startup)}
-                    className="p-4 cursor-pointer hover:shadow-md transition-shadow bg-card"
+                    onClick={handleCardClick}
+                    className={`p-4 cursor-pointer hover:shadow-md transition-shadow bg-card ${
+                      isClosedStage && hasPortfolioInvestment ? "border-l-4 border-l-green-500" : ""
+                    }`}
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -147,7 +184,8 @@ export function KanbanBoard({ startups, onSelectStartup, onMoveStartup, onViewSt
                       </div>
                     </div>
                   </Card>
-                ))}
+                  )
+                })}
 
                 {stageStartups.length === 0 && (
                   <div className="text-center text-sm text-muted-foreground py-8">No startups in this stage</div>

@@ -67,6 +67,12 @@ model Startup {
   // Threshold Issues (separate table for better querying)
   thresholdIssues ThresholdIssue[]
 
+  // Portfolio Investment (one-to-one for closed deals)
+  portfolioInvestment PortfolioInvestment?
+
+  // Founders (many-to-many through FounderCompany)
+  founders FounderCompany[]
+
   // Initial Assessment (stored as JSON)
   initialAssessment Json? // {marketOpportunity, teamQuality, productInnovation, businessModel, competitivePosition, commentary}
 
@@ -191,5 +197,338 @@ model UserShortlist {
 
   @@unique([userId, startupId]) // One shortlist entry per user per startup
   @@index([userId])
+  @@index([startupId])
+}
+
+// =====================================
+// PORTFOLIO MANAGEMENT MODELS
+// =====================================
+
+// Main Portfolio Investment - tracks our investment in a company
+model PortfolioInvestment {
+  id                    String   @id @default(uuid())
+  startupId             String   @unique
+  startup               Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  // Investment Details
+  investmentDate        DateTime
+  investmentAmount      Float    // USD invested
+  investmentRound       String?  // "Pre-Seed", "Seed", "Series A", etc.
+  investmentType        String   @default("equity") // "equity", "safe", "convertible", "debt"
+  leadInvestor          Boolean  @default(false)
+  boardSeat             Boolean  @default(false)
+  boardObserver         Boolean  @default(false)
+
+  // Valuation at Entry
+  preMoneyValuation     Float?
+  postMoneyValuation    Float?
+  equityPercentage      Float?   // Our ownership % at entry
+
+  // Current Status
+  currentValuation      Float?   // Latest known valuation
+  currentEquityPct      Float?   // Current ownership % (after dilution)
+  lastValuationDate     DateTime?
+  status                String   @default("active") // "active", "exited", "written_off"
+
+  // Pro-rata Rights
+  proRataRights         Boolean  @default(true)
+  proRataAmount         Float?   // Amount we can invest in next round
+
+  // Exit Information
+  exitDate              DateTime?
+  exitType              String?  // "IPO", "acquisition", "secondary", "buyback", "write_off"
+  exitAmount            Float?   // Total amount returned
+  exitMultiple          Float?   // MOIC (Multiple on Invested Capital)
+  acquirer              String?  // Name of acquirer if acquisition
+
+  // Notes
+  investmentThesis      String?  // Why we invested
+  notes                 String?
+
+  // Related data
+  followOnInvestments   FollowOnInvestment[]
+  milestones            PortfolioMilestone[]
+  updates               PortfolioUpdate[]
+  boardMeetings         BoardMeeting[]
+  communications        FounderCommunication[]
+  kpiSnapshots          KPISnapshot[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status])
+  @@index([investmentDate])
+  @@index([exitDate])
+}
+
+// Follow-on Investments in the same company
+model FollowOnInvestment {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+  amount                Float
+  round                 String?  // "Series B", "Series C", etc.
+  preMoneyValuation     Float?
+  postMoneyValuation    Float?
+  leadInvestor          Boolean  @default(false)
+  notes                 String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([portfolioInvestmentId])
+  @@index([date])
+}
+
+// Key Milestones for portfolio companies
+model PortfolioMilestone {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+  title                 String
+  category              String   // "funding", "product", "revenue", "team", "partnership", "customer", "other"
+  description           String?
+  impact                String?  // "positive", "negative", "neutral"
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([portfolioInvestmentId])
+  @@index([date])
+  @@index([category])
+}
+
+// Quarterly/Monthly Updates from Founders
+model PortfolioUpdate {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+  period                String   // "Q1 2024", "January 2024", etc.
+
+  // Key Metrics (flexible JSON for different business models)
+  metrics               Json?    // {mrr, arr, customers, growth, burn, runway, etc.}
+
+  // Update Content
+  highlights            String?  // Key wins
+  challenges            String?  // Current challenges
+  askFromInvestors      String?  // How we can help
+  nextMilestones        String?  // What they're working on
+
+  // Health Assessment
+  overallHealth         String?  // "green", "yellow", "red"
+  needsAttention        Boolean  @default(false)
+
+  // Attachments (stored as JSON array of URLs/references)
+  attachments           Json?    // [{name, url, type}]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([portfolioInvestmentId])
+  @@index([date])
+  @@index([overallHealth])
+}
+
+// Board Meetings
+model BoardMeeting {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+  type                  String   @default("regular") // "regular", "special", "annual"
+  location              String?  // "Virtual", "SF Office", etc.
+
+  // Agenda and Notes
+  agenda                String?
+  notes                 String?
+  keyDecisions          String?
+  actionItems           Json?    // [{item, owner, dueDate, status}]
+
+  // Attendees
+  attendees             Json?    // [{name, role, attended}]
+
+  // Documents (stored as JSON array)
+  documents             Json?    // [{name, url, type}]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([portfolioInvestmentId])
+  @@index([date])
+}
+
+// Communication Log with Founders
+model FounderCommunication {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+  type                  String   // "call", "email", "meeting", "text", "other"
+  subject               String?
+  summary               String?
+  participants          Json?    // [{name, role}]
+  followUpRequired      Boolean  @default(false)
+  followUpDate          DateTime?
+
+  // Support Provided
+  supportType           String?  // "intro", "advice", "recruiting", "fundraising", "other"
+  supportDetails        String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([portfolioInvestmentId])
+  @@index([date])
+  @@index([type])
+}
+
+// KPI Snapshots for tracking performance over time
+model KPISnapshot {
+  id                    String   @id @default(uuid())
+  portfolioInvestmentId String
+  portfolioInvestment   PortfolioInvestment @relation(fields: [portfolioInvestmentId], references: [id], onDelete: Cascade)
+
+  date                  DateTime
+
+  // Financial KPIs
+  mrr                   Float?   // Monthly Recurring Revenue
+  arr                   Float?   // Annual Recurring Revenue
+  revenue               Float?   // Total Revenue (for non-SaaS)
+  grossMargin           Float?   // Percentage
+  netBurn               Float?   // Monthly net burn
+  runway                Float?   // Months of runway
+  cash                  Float?   // Cash on hand
+
+  // Growth KPIs
+  revenueGrowthMoM      Float?   // Month over month %
+  revenueGrowthYoY      Float?   // Year over year %
+
+  // Customer KPIs
+  customers             Int?     // Total customers
+  newCustomers          Int?     // New customers this period
+  churnRate             Float?   // Monthly churn %
+  nrr                   Float?   // Net Revenue Retention %
+  ltv                   Float?   // Lifetime Value
+  cac                   Float?   // Customer Acquisition Cost
+  ltvCacRatio           Float?   // LTV/CAC ratio
+
+  // Team KPIs
+  employees             Int?     // Total headcount
+
+  // Custom KPIs (flexible JSON for industry-specific metrics)
+  customKPIs            Json?    // {metricName: value, ...}
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([portfolioInvestmentId, date])
+  @@index([portfolioInvestmentId])
+  @@index([date])
+}
+
+// Portfolio-level documents (term sheets, SPAs, etc.)
+model PortfolioDocument {
+  id                    String   @id @default(uuid())
+  startupId             String
+
+  name                  String
+  category              String   // "term_sheet", "spa", "side_letter", "board_consent", "financials", "cap_table", "other"
+  description           String?
+  fileUrl               String?  // URL to stored file
+  fileType              String?  // "pdf", "docx", "xlsx", etc.
+  fileSize              Int?     // Size in bytes
+
+  // Version control
+  version               Int      @default(1)
+  isLatest              Boolean  @default(true)
+
+  uploadedBy            String?  // User ID who uploaded
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([startupId])
+  @@index([category])
+}
+
+// =====================================
+// FOUNDER MANAGEMENT MODELS
+// =====================================
+
+// Founder - represents a person who can be associated with multiple companies
+model Founder {
+  id              String   @id @default(uuid())
+
+  // Identity (for deduplication)
+  name            String
+  normalizedName  String   // Lowercase, trimmed for matching
+  email           String?  @unique
+  linkedIn        String?  @unique
+
+  // Profile
+  title           String?
+  bio             String?  @db.Text
+  location        String?
+  photoUrl        String?
+
+  // Background (structured JSON)
+  education       Json?    // [{institution, degree, field, years}]
+  experience      Json?    // [{company, role, description, years}]
+
+  // Social Links
+  twitter         String?
+  github          String?
+  website         String?
+
+  // Metadata
+  skills          String[]
+  tags            String[]
+  notes           String?  @db.Text
+  source          String?  // "csv_upload", "manual"
+
+  // Pipeline tracking
+  pipelineStage   String   @default("Deal Flow")
+
+  // Relations
+  companies       FounderCompany[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([normalizedName])
+  @@index([name])
+  @@index([pipelineStage])
+}
+
+// FounderCompany - junction table for many-to-many relationship
+model FounderCompany {
+  id              String   @id @default(uuid())
+
+  founderId       String
+  founder         Founder  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  startupId       String
+  startup         Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  // Role at this company
+  role            String   @default("Founder")
+  title           String?
+  isPrimary       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([founderId, startupId])
+  @@index([founderId])
   @@index([startupId])
 }
