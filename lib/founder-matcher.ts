@@ -240,6 +240,8 @@ export async function createOrUpdateFounder(
     skills?: string[]
     source?: string
     pipelineStage?: string
+    customData?: unknown
+    customSchema?: unknown
   },
   existingFounderId?: string
 ): Promise<FounderDB> {
@@ -265,6 +267,8 @@ export async function createOrUpdateFounder(
         skills: data.skills || [],
         source: data.source || undefined,
         pipelineStage: data.pipelineStage || undefined,
+        customData: data.customData as object || undefined,
+        customSchema: data.customSchema as object || undefined,
       }
     })
     return updated as FounderDB
@@ -287,7 +291,9 @@ export async function createOrUpdateFounder(
         skills: data.skills || [],
         tags: [],
         source: data.source || 'csv_upload',
-        pipelineStage: data.pipelineStage || 'Deal Flow',
+        pipelineStage: data.pipelineStage || 'Screening',
+        customData: data.customData as object || null,
+        customSchema: data.customSchema as object || null,
       }
     })
     return created as FounderDB

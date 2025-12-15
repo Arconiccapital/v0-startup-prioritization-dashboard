@@ -21,18 +21,31 @@ import {
   Copy,
   Check,
   Loader2,
+  Github,
+  Twitter,
 } from "lucide-react"
-import type { Founder } from "@/lib/types"
+import type { Founder, FounderDB, CustomData, CustomSchema } from "@/lib/types"
 import { parseFoundersFromStartup } from "@/lib/founder-parser"
+import { DynamicDataSection } from "@/components/dynamic-data-section"
+
+// Extended founder type that includes database fields
+interface FounderWithCustomData extends Founder {
+  customData?: CustomData | null
+  customSchema?: CustomSchema | null
+  twitter?: string | null
+  github?: string | null
+  website?: string | null
+}
 
 export default function FounderProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { id } = use(params)
 
-  const [founder, setFounder] = useState<Founder | null>(null)
+  const [founder, setFounder] = useState<FounderWithCustomData | null>(null)
   const [startup, setStartup] = useState<Record<string, unknown> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDbFounder, setIsDbFounder] = useState(false)
 
   // Outreach message state
   const [outreachMessage, setOutreachMessage] = useState<string>("")
@@ -42,47 +55,100 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     async function loadFounder() {
       try {
-        // Parse founder ID: format is "${startupId}-founder-${index}"
-        const match = id.match(/^(.+)-founder-(\d+)$/)
-        if (!match) {
-          setError("Invalid founder ID format")
-          setIsLoading(false)
-          return
-        }
+        // Check if this is the legacy format "${startupId}-founder-${index}"
+        const legacyMatch = id.match(/^(.+)-founder-(\d+)$/)
 
-        const [, startupId, indexStr] = match
-        const founderIndex = parseInt(indexStr, 10)
+        if (legacyMatch) {
+          // Legacy format: parse from startup data
+          const [, startupId, indexStr] = legacyMatch
+          const founderIndex = parseInt(indexStr, 10)
 
-        // Fetch the startup
-        const response = await fetch(`/api/startups/${startupId}`)
-        if (!response.ok) {
-          setError("Failed to load founder data")
-          setIsLoading(false)
-          return
-        }
+          const response = await fetch(`/api/startups/${startupId}`)
+          if (!response.ok) {
+            setError("Failed to load founder data")
+            setIsLoading(false)
+            return
+          }
 
-        const startupData = await response.json()
+          const startupData = await response.json()
+          setStartup(startupData)
 
-        // Store startup for outreach generation
-        setStartup(startupData)
+          const founders = parseFoundersFromStartup({
+            id: startupData.id,
+            name: startupData.name,
+            sector: startupData.sector,
+            country: startupData.country,
+            description: startupData.description,
+            rank: startupData.rank,
+            pipelineStage: startupData.pipelineStage,
+            companyInfo: startupData.companyInfo,
+            teamInfo: startupData.teamInfo,
+          })
 
-        // Parse founders from the startup
-        const founders = parseFoundersFromStartup({
-          id: startupData.id,
-          name: startupData.name,
-          sector: startupData.sector,
-          country: startupData.country,
-          description: startupData.description,
-          rank: startupData.rank,
-          pipelineStage: startupData.pipelineStage,
-          companyInfo: startupData.companyInfo,
-          teamInfo: startupData.teamInfo,
-        })
-
-        if (founderIndex >= 0 && founderIndex < founders.length) {
-          setFounder(founders[founderIndex])
+          if (founderIndex >= 0 && founderIndex < founders.length) {
+            setFounder(founders[founderIndex])
+            setIsDbFounder(false)
+          } else {
+            setError("Founder not found")
+          }
         } else {
-          setError("Founder not found")
+          // Database ID: fetch from Founder API
+          const response = await fetch(`/api/founders/${id}`)
+          if (!response.ok) {
+            if (response.status === 404) {
+              setError("Founder not found")
+            } else {
+              setError("Failed to load founder data")
+            }
+            setIsLoading(false)
+            return
+          }
+
+          const dbFounder = await response.json()
+          setIsDbFounder(true)
+
+          // Map database founder to display format
+          const primaryCompany = dbFounder.companies?.[0]?.startup
+          const founderData: FounderWithCustomData = {
+            id: dbFounder.id,
+            name: dbFounder.name,
+            role: dbFounder.title || "Founder",
+            linkedIn: dbFounder.linkedIn || "",
+            education: typeof dbFounder.education === "object" && dbFounder.education?.raw
+              ? dbFounder.education.raw
+              : null,
+            priorExperience: typeof dbFounder.experience === "object" && dbFounder.experience?.raw
+              ? dbFounder.experience.raw
+              : null,
+            companyId: primaryCompany?.id || "",
+            companyName: primaryCompany?.name || "Unknown",
+            companySector: primaryCompany?.sector || "Unknown",
+            companyRank: primaryCompany?.rank || 0,
+            companyDescription: primaryCompany?.description || "",
+            companyCountry: primaryCompany?.country || "",
+            companyWebsite: primaryCompany?.companyInfo?.website || "",
+            pipelineStage: primaryCompany?.pipelineStage || dbFounder.pipelineStage || "Screening",
+            // Include database-specific fields
+            customData: dbFounder.customData as CustomData | null,
+            customSchema: dbFounder.customSchema as CustomSchema | null,
+            twitter: dbFounder.twitter,
+            github: dbFounder.github,
+            website: dbFounder.website,
+          }
+
+          setFounder(founderData)
+
+          // Build startup data for outreach generation
+          if (primaryCompany) {
+            setStartup({
+              id: primaryCompany.id,
+              name: primaryCompany.name,
+              sector: primaryCompany.sector,
+              country: primaryCompany.country,
+              description: primaryCompany.description,
+              companyInfo: primaryCompany.companyInfo,
+            })
+          }
         }
       } catch (err) {
         console.error("[Founder] Error loading founder:", err)
@@ -224,7 +290,7 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {founder.linkedIn && (
                   <a
                     href={founder.linkedIn}
@@ -236,6 +302,48 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                     View LinkedIn Profile
                     <ExternalLink className="w-3 h-3" />
                   </a>
+                )}
+                {founder.twitter && (
+                  <a
+                    href={founder.twitter.startsWith("http") ? founder.twitter : `https://twitter.com/${founder.twitter.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  >
+                    <Twitter className="w-4 h-4" />
+                    Twitter
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                {founder.github && (
+                  <a
+                    href={founder.github.startsWith("http") ? founder.github : `https://github.com/${founder.github}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  >
+                    <Github className="w-4 h-4" />
+                    GitHub
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                {founder.website && (
+                  <a
+                    href={founder.website.startsWith("http") ? founder.website : `https://${founder.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  >
+                    <Globe className="w-4 h-4" />
+                    Personal Website
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                {isDbFounder && (
+                  <Badge variant="secondary" className="mt-2">
+                    <User className="w-3 h-3 mr-1" />
+                    Database Record
+                  </Badge>
                 )}
               </CardContent>
             </Card>
@@ -357,6 +465,22 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                 )}
               </CardContent>
             </Card>
+
+            {/* Custom Data Section - only for database founders with custom data */}
+            {isDbFounder && founder.customData && founder.customSchema && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Additional Information</CardTitle>
+                  <CardDescription>Custom data imported from CSV</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DynamicDataSection
+                    data={founder.customData}
+                    schema={founder.customSchema}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Outreach Card */}
             <Card>

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PUT /api/startups/[id] - Update startup
+// PUT /api/startups/[id] - Update startup (full replacement)
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -41,6 +41,47 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json(startup)
   } catch (error) {
     console.error("[API] Error updating startup:", error)
+    return NextResponse.json({ error: "Failed to update startup" }, { status: 500 })
+  }
+}
+
+// PATCH /api/startups/[id] - Partial update startup
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    // Only update fields that are provided
+    const updateData: Record<string, unknown> = {}
+
+    // List of allowed fields for partial update
+    const allowedFields = [
+      'name', 'description', 'sector', 'stage', 'country',
+      'pipelineStage', 'score', 'aiScores', 'rationale',
+      'companyInfo', 'marketInfo', 'productInfo', 'businessModelInfo',
+      'salesInfo', 'teamInfo', 'competitiveInfo', 'riskInfo', 'opportunityInfo',
+      'initialAssessment', 'investmentScorecard', 'investmentMemo', 'investmentDecision',
+      'valuationData', 'legalDiligence',
+      'documents', 'customData', 'customSchema'
+    ]
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field]
+      }
+    }
+
+    const startup = await prisma.startup.update({
+      where: { id },
+      data: updateData,
+      include: {
+        thresholdIssues: true,
+      },
+    })
+
+    return NextResponse.json(startup)
+  } catch (error) {
+    console.error("[API] Error patching startup:", error)
     return NextResponse.json({ error: "Failed to update startup" }, { status: 500 })
   }
 }

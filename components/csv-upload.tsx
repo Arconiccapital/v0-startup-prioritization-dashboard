@@ -7,8 +7,8 @@ import { Upload, FileText, AlertCircle, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { parseCSVPreview, parseCSVWithMapping, suggestMapping } from "@/lib/csv-parser"
-import type { Startup, CSVPreview, ColumnMapping } from "@/lib/types"
+import { parseCSVPreview, parseCSVWithAIMappings, suggestMapping } from "@/lib/csv-parser"
+import type { Startup, CSVPreview, ColumnMapping, LLMMappingSuggestion, CustomData, CustomSchema } from "@/lib/types"
 import { ColumnMapper } from "./column-mapper"
 
 interface CsvUploadProps {
@@ -54,16 +54,31 @@ export function CsvUpload({ onUploadComplete }: CsvUploadProps) {
     }
   }
 
-  const handleConfirmMapping = async (mapping: ColumnMapping) => {
+  const handleConfirmMapping = async (mapping: ColumnMapping, aiMappings?: LLMMappingSuggestion[]) => {
     if (!csvText) return
 
     try {
-      const startups = parseCSVWithMapping(csvText, mapping)
+      // Use the enhanced parser that handles AI mappings and custom data
+      const results = parseCSVWithAIMappings(csvText, mapping, aiMappings)
 
-      if (startups.length === 0) {
+      if (results.length === 0) {
         setError("No valid startup data found in CSV")
         return
       }
+
+      // Extract startups with customData and customSchema attached
+      const startups = results.map(({ startup, customData, customSchema }) => {
+        // Attach custom data and schema to the startup object
+        // These will be saved to the database by the API
+        return {
+          ...startup,
+          customData: Object.keys(customData).length > 0 ? customData : undefined,
+          customSchema: Object.keys(customSchema).length > 0 ? customSchema : undefined,
+        } as Startup
+      })
+
+      console.log(`[CsvUpload] Parsed ${startups.length} startups`)
+      console.log(`[CsvUpload] ${startups.filter(s => s.customData).length} startups have custom data`)
 
       // For large uploads, pass startups array directly
       // The parent component will handle chunked uploading

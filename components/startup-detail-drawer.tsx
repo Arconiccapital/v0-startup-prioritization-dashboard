@@ -288,13 +288,13 @@ export function StartupDetailDrawer({
 
   const getNextStage = (currentStage: PipelineStage): PipelineStage | null => {
     const stages: PipelineStage[] = [
-      "Deal Flow",
-      "Intro Sent",
+      "Screening",
       "First Meeting",
-      "Due Diligence",
-      "Partner Review",
-      "Term Sheet",
-      "Closed",
+      "IC1",
+      "DD",
+      "IC2",
+      "Closing",
+      "Portfolio",
     ]
     const currentIndex = stages.indexOf(currentStage)
     if (currentIndex === -1 || currentIndex === stages.length - 1) return null
@@ -303,49 +303,49 @@ export function StartupDetailDrawer({
 
   const getAdvanceButtonText = (nextStage: PipelineStage): string => {
     const buttonTexts: Record<PipelineStage, string> = {
-      "Deal Flow": "Move to Deal Flow",
-      "Intro Sent": "Send Introduction",
+      "Screening": "Move to Screening",
       "First Meeting": "Schedule First Meeting",
-      "Due Diligence": "Begin Due Diligence",
-      "Partner Review": "Submit for Partner Review",
-      "Term Sheet": "Prepare Term Sheet",
-      Closed: "Mark as Closed",
+      "IC1": "Submit to IC1",
+      "DD": "Begin Due Diligence",
+      "IC2": "Submit to IC2",
+      "Closing": "Begin Closing",
+      "Portfolio": "Add to Portfolio",
     }
     return buttonTexts[nextStage] || "Advance Stage"
   }
 
   const nextStage = startup?.pipelineStage ? getNextStage(startup.pipelineStage) : null
 
-  const canAddTranscript = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const canAddTranscript = ["First Meeting", "IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
-  const canAddPitchDeck = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const canAddPitchDeck = ["First Meeting", "IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
-  const canAddScorecard = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const canAddScorecard = ["IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
-  const canGenerateMemo = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const canGenerateMemo = ["IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
-  const canGenerateReport = startup.pipelineStage === "Intro Sent"
-  const canAddMeetings = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const canGenerateReport = startup.pipelineStage === "Screening"
+  const canAddMeetings = ["First Meeting", "IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
 
-  const showAdvancedTabs = ["First Meeting", "Due Diligence", "Partner Review", "Term Sheet", "Closed"].includes(
+  const showAdvancedTabs = ["First Meeting", "IC1", "DD", "IC2", "Closing", "Portfolio"].includes(
     startup.pipelineStage || "",
   )
 
   const getStageMessage = (stage: PipelineStage): string => {
     const messages: Record<PipelineStage, string> = {
-      "Deal Flow": "Move to First Meeting to add transcripts",
-      "Intro Sent": "Awaiting response from introduction",
-      "First Meeting": "You can now generate investment memos",
-      "Due Diligence": "Conduct thorough due diligence and track issues",
-      "Partner Review": "Prepare materials for partner review",
-      "Term Sheet": "Finalize term sheet and documentation",
-      Closed: "Deal completed",
+      "Screening": "Initial screening - conduct outreach",
+      "First Meeting": "You can now add meeting notes and documents",
+      "IC1": "Prepare materials for first IC review",
+      "DD": "Conduct thorough due diligence and track issues",
+      "IC2": "Prepare final recommendation for IC2",
+      "Closing": "Finalize term sheet and documentation",
+      "Portfolio": "Active portfolio company",
     }
     return messages[stage] || ""
   }
@@ -505,10 +505,10 @@ export function StartupDetailDrawer({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 mb-2">
-                      Current Stage: {startup.pipelineStage || "Deal Flow"}
+                      Current Stage: {startup.pipelineStage || "Screening"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {getStageMessage(startup.pipelineStage || "Deal Flow")}
+                      {getStageMessage(startup.pipelineStage || "Screening")}
                     </p>
                   </div>
                   {nextStage && onUpdateStage && (

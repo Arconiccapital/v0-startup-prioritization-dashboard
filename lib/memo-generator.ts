@@ -10,7 +10,7 @@ ${startup.description || "No description available."}
 
 **Location:** ${startup.country || "N/A"}
 **Stage:** ${startup.stage || "N/A"}
-**Pipeline Stage:** ${startup.pipelineStage || "Deal Flow"}
+**Pipeline Stage:** ${startup.pipelineStage || "Screening"}
 
 **Machine Learning Score:** ${startup.aiScores?.ml || "N/A"}/100
 **Investment Score Overview:** ${startup.investmentScoreOverview || "Pending analysis"}
@@ -290,7 +290,7 @@ ${
 ---
 
 *Investment Memo Generated: ${new Date().toLocaleString()}*
-*Pipeline Stage: ${startup.pipelineStage || "Deal Flow"}*
+*Pipeline Stage: ${startup.pipelineStage || "Screening"}*
 *Overall Score: ${startup.score}/100*`)
 
   return sections.join("\n\n")

@@ -18,6 +18,7 @@ export default auth((req) => {
     "/api/generate-outreach", // Founder outreach message generation
     "/api/portfolio", // Portfolio management endpoints
     "/api/founders", // Founders list endpoint
+    "/api/csv-analyze", // CSV column mapping AI analysis
   ]
 
   // Check if current path is public

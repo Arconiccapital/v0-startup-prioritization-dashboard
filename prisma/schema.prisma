@@ -23,7 +23,7 @@ model Startup {
   score           Float    @default(0)
   rank            Int      @default(0)
   feedback        Json     @default("[]") // Array of feedback items
-  pipelineStage   String   @default("Deal Flow")
+  pipelineStage   String   @default("Screening")
 
   // User-specific shortlists (many-to-many)
   shortlistedBy   UserShortlist[]
@@ -82,8 +82,21 @@ model Startup {
   // Investment Memo (stored as JSON)
   investmentMemo  Json? // {sections: {executive, thesis, market, product, business, gtm, team, competitive, risk, recommendation}, generatedAt}
 
+  // Investment Decision (stored as JSON) - IC2 decision tracking
+  investmentDecision Json? // {decision, decisionDate, votes: [{name, vote, rationale}], categories: {team, market, product, traction, competition, dealTerms}, reasonsToInvest, reasonsNotToInvest, additionalContext, nextSteps}
+
+  // Valuation & Terms (stored as JSON) - DD stage onwards
+  valuationData     Json? // {valuation: {proposedPreMoney, proposedPostMoney, askingValuation, ourOffer, comparableCompanies, valuationNotes}, financials: {currentARR, currentMRR, runway, burnRate, grossMargin, lastRoundValuation, lastRoundDate, totalRaised, revenueGrowthRate, financialNotes}, termSheet: {roundSize, ourAllocation, ownershipTarget, proRataRights, boardSeat, boardObserver, liquidationPreference, antiDilution, dividends, votingRights, protectiveProvisions, otherTerms, termSheetStatus, termSheetNotes}, lastUpdated}
+
+  // Legal Diligence (stored as JSON) - DD stage onwards
+  legalDiligence    Json? // {checklist: {corporateDocs, ip, contracts, employment, compliance}, issues: [{id, category, issue, severity, status, notes, identifiedDate}], overallStatus, counselName, counselNotes, lastUpdated}
+
   // Documents (stored as JSON)
   documents       Json? // {transcript, pitchDeck}
+
+  // Custom/Dynamic Data (LLM-organized categories from CSV upload)
+  customData      Json? // { "categoryKey": { "fieldKey": "value", ... }, ... }
+  customSchema    Json? // { "categoryKey": { displayName, sortOrder, fields: {...} }, ... }
 
   // Timestamps
   createdAt       DateTime @default(now())
@@ -495,7 +508,11 @@ model Founder {
   source          String?  // "csv_upload", "manual"
 
   // Pipeline tracking
-  pipelineStage   String   @default("Deal Flow")
+  pipelineStage   String   @default("Screening")
+
+  // Custom data from CSV import (unmapped columns)
+  customData      Json?    // { "categoryKey": { "fieldKey": "value", ... }, ... }
+  customSchema    Json?    // { "categoryKey": { displayName, sortOrder, fields: {...} }, ... }
 
   // Relations
   companies       FounderCompany[]

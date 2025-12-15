@@ -4,20 +4,10 @@ import type React from "react"
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import type { Startup, PipelineStage } from "@/lib/types"
+import { PIPELINE_STAGES } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Briefcase } from "lucide-react"
-
-const PIPELINE_STAGES: PipelineStage[] = [
-  "Deal Flow",
-  "Shortlist",
-  "Intro Sent",
-  "First Meeting",
-  "Due Diligence",
-  "Partner Review",
-  "Term Sheet",
-  "Closed",
-]
 
 interface KanbanBoardProps {
   startups: Startup[]
@@ -39,21 +29,19 @@ export function KanbanBoard({
   const router = useRouter()
   const [draggedStartup, setDraggedStartup] = useState<string | null>(null)
 
-  // Memoize startups by stage to avoid filtering 8 times on every render
-  // This provides ~8x performance improvement for large datasets
+  // Memoize startups by stage to avoid filtering on every render
   const startupsByStage = useMemo(() => {
     const result: Record<PipelineStage, Startup[]> = {
-      "Deal Flow": [],
-      "Shortlist": [],
-      "Intro Sent": [],
+      "Screening": [],
       "First Meeting": [],
-      "Due Diligence": [],
-      "Partner Review": [],
-      "Term Sheet": [],
-      "Closed": [],
+      "IC1": [],
+      "DD": [],
+      "IC2": [],
+      "Closing": [],
+      "Portfolio": [],
     }
 
-    // Single pass through startups instead of 8 separate filter operations
+    // Single pass through startups instead of separate filter operations
     startups.forEach((startup) => {
       if (result[startup.pipelineStage]) {
         result[startup.pipelineStage].push(startup)
@@ -77,8 +65,8 @@ export function KanbanBoard({
 
   const handleDrop = (stage: PipelineStage) => {
     if (draggedStartup) {
-      // If dropping on "Closed" stage and we have the portfolio callback, trigger it
-      if (stage === "Closed" && onMoveToPortfolio) {
+      // If dropping on "Portfolio" stage and we have the portfolio callback, trigger it
+      if (stage === "Portfolio" && onMoveToPortfolio) {
         const startup = startups.find(s => s.id === draggedStartup)
         if (startup) {
           onMoveToPortfolio(startup)
@@ -100,35 +88,35 @@ export function KanbanBoard({
   return (
     <div className="h-full overflow-x-auto p-6">
       <div className="flex gap-4 h-full min-w-max">
-        {PIPELINE_STAGES.map((stage) => {
-          const stageStartups = getStartupsByStage(stage)
+        {PIPELINE_STAGES.map((stageInfo) => {
+          const stageStartups = getStartupsByStage(stageInfo.id)
           return (
             <div
-              key={stage}
+              key={stageInfo.id}
               className="flex-shrink-0 w-80 flex flex-col"
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(stage)}
+              onDrop={() => handleDrop(stageInfo.id)}
             >
               <div
                 className="bg-muted p-3 mb-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                onClick={() => onViewStage(stage)}
+                onClick={() => onViewStage(stageInfo.id)}
               >
                 <h3 className="font-semibold text-sm">
-                  {stage}
+                  {stageInfo.label}
                   <span className="ml-2 text-muted-foreground">({stageStartups.length})</span>
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">Click to view all</p>
+                <p className="text-xs text-muted-foreground mt-1">{stageInfo.description}</p>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {stageStartups.map((startup) => {
                   // Check if this startup has a portfolio investment
                   const hasPortfolioInvestment = portfolioInvestmentIds.includes(startup.id)
-                  const isClosedStage = stage === "Closed"
+                  const isPortfolioStage = stageInfo.id === "Portfolio"
 
                   const handleCardClick = () => {
-                    // If in Closed stage and has portfolio investment, navigate to portfolio
-                    if (isClosedStage && hasPortfolioInvestment) {
+                    // If in Portfolio stage and has portfolio investment, navigate to portfolio
+                    if (isPortfolioStage && hasPortfolioInvestment) {
                       router.push(`/portfolio/${startup.id}`)
                     } else {
                       onSelectStartup(startup)
@@ -142,7 +130,7 @@ export function KanbanBoard({
                     onDragStart={() => handleDragStart(startup.id)}
                     onClick={handleCardClick}
                     className={`p-4 cursor-pointer hover:shadow-md transition-shadow bg-card ${
-                      isClosedStage && hasPortfolioInvestment ? "border-l-4 border-l-green-500" : ""
+                      isPortfolioStage && hasPortfolioInvestment ? "border-l-4 border-l-green-500" : ""
                     }`}
                   >
                     <div className="space-y-2">

@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
       website: website || null,
       skills: skills || [],
       source: 'manual',
-      pipelineStage: pipelineStage || 'Deal Flow',
+      pipelineStage: pipelineStage || 'Screening',
     })
 
     // Link to company if specified

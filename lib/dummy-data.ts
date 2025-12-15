@@ -704,7 +704,7 @@ export const dummyStartups: Startup[] = [
     score: 61,
     rank: 11,
     feedback: [],
-    pipelineStage: "Deal Flow",
+    pipelineStage: "Screening",
     aiScores: {
       llm: 62,
       ml: 60,

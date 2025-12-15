@@ -1,4 +1,26 @@
-import type { FounderCSVMapping } from "@/lib/types"
+import type {
+  FounderCSVMapping,
+  LLMMappingSuggestion,
+  CustomSchema,
+  CustomData,
+  CustomFieldSchema,
+} from "@/lib/types"
+
+// Predefined founder field keys that map to database columns
+const PREDEFINED_FOUNDER_FIELDS = new Set([
+  'name', 'email', 'linkedIn', 'title', 'education', 'experience',
+  'bio', 'location', 'twitter', 'github', 'website', 'skills',
+  'companyName', 'role',
+])
+
+// Category display names for custom schema
+const FOUNDER_CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  personalInfo: 'Personal Info',
+  contactInfo: 'Contact Info',
+  background: 'Background',
+  skills: 'Skills & Expertise',
+  companyRole: 'Company Role',
+}
 
 /**
  * Parsed founder data from CSV row
@@ -350,4 +372,198 @@ export function generateFounderCSVTemplate(): string {
     headers.join(','),
     sampleRow.map(v => `"${v}"`).join(',')
   ].join('\n')
+}
+
+/**
+ * Enhanced founder parsing that uses AI mappings and stores unmapped fields in customData
+ */
+export interface ParsedFounderWithCustomData {
+  founder: ParsedFounder
+  customData: CustomData
+  customSchema: CustomSchema
+}
+
+export function parseFoundersWithAIMappings(
+  csvText: string,
+  mapping: FounderCSVMapping,
+  aiMappings?: LLMMappingSuggestion[]
+): ParsedFounderWithCustomData[] {
+  const { headers, rows } = parseCSVText(csvText)
+  const results: ParsedFounderWithCustomData[] = []
+
+  // Create header index map
+  const headerIndex: Record<string, number> = {}
+  headers.forEach((h, i) => {
+    headerIndex[h] = i
+  })
+
+  // Build set of headers that are mapped to predefined fields
+  const mappedHeaders = new Set<string>()
+  Object.values(mapping).forEach(headerName => {
+    if (headerName) mappedHeaders.add(headerName)
+  })
+
+  // Identify unmapped headers and their AI suggestions
+  const unmappedMappings: Map<string, LLMMappingSuggestion> = new Map()
+
+  if (aiMappings) {
+    for (const suggestion of aiMappings) {
+      const isPredefinedField = PREDEFINED_FOUNDER_FIELDS.has(suggestion.suggestedField)
+      const isMappedToPredefined = mappedHeaders.has(suggestion.csvHeader)
+
+      // Store mapping for custom fields or new categories
+      if (!isPredefinedField || suggestion.categoryType === 'new') {
+        unmappedMappings.set(suggestion.csvHeader, suggestion)
+      } else if (!isMappedToPredefined) {
+        unmappedMappings.set(suggestion.csvHeader, suggestion)
+      }
+    }
+  } else {
+    // No AI mappings - auto-detect unmapped columns
+    for (const header of headers) {
+      if (!mappedHeaders.has(header)) {
+        unmappedMappings.set(header, {
+          csvHeader: header,
+          suggestedCategory: 'unmapped',
+          suggestedField: header.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+          categoryType: 'new',
+          confidence: 50,
+          reasoning: 'Auto-detected unmapped column',
+        })
+      }
+    }
+  }
+
+  // Generate custom schema from unmapped mappings
+  const customSchema: CustomSchema = {}
+  let categoryOrder = 100
+
+  for (const [_header, suggestion] of unmappedMappings) {
+    const categoryKey = suggestion.suggestedCategory
+
+    if (!customSchema[categoryKey]) {
+      customSchema[categoryKey] = {
+        displayName: FOUNDER_CATEGORY_DISPLAY_NAMES[categoryKey] ||
+          categoryKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim(),
+        sortOrder: categoryOrder++,
+        fields: {},
+      }
+    }
+
+    // Infer data type from sample value
+    let dataType: CustomFieldSchema['dataType'] = 'text'
+    if (suggestion.sampleValue) {
+      const sample = suggestion.sampleValue
+      if (/^\d+(\.\d+)?$/.test(sample.replace(/[,$%]/g, ''))) {
+        dataType = 'number'
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(sample) || /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(sample)) {
+        dataType = 'date'
+      } else if (/^https?:\/\//.test(sample) || /^www\./.test(sample)) {
+        dataType = 'url'
+      } else if (/^(true|false|yes|no)$/i.test(sample)) {
+        dataType = 'boolean'
+      }
+    }
+
+    customSchema[categoryKey].fields[suggestion.suggestedField] = {
+      displayName: suggestion.csvHeader,
+      dataType,
+      originalCsvHeader: suggestion.csvHeader,
+      description: suggestion.reasoning,
+    }
+  }
+
+  console.log("[Founder Parser] Custom schema:", JSON.stringify(customSchema, null, 2))
+
+  // Helper functions
+  const getIndex = (mappingKey: keyof FounderCSVMapping): number => {
+    const columnName = mapping[mappingKey]
+    return columnName ? headerIndex[columnName] ?? -1 : -1
+  }
+
+  const getValue = (header: string): string | null => {
+    const index = headerIndex[header]
+    if (index === undefined) return null
+    return null
+  }
+
+  const getValueByIndex = (index: number, row: string[]): string | null => {
+    if (index === -1) return null
+    const value = row[index]?.trim()
+    return value || null
+  }
+
+  // Parse each row
+  for (const row of rows) {
+    const nameIndex = getIndex('name')
+    if (nameIndex === -1 || !row[nameIndex]?.trim()) {
+      continue
+    }
+
+    // Parse skills as array
+    const skillsIndex = getIndex('skills')
+    const skillsValue = getValueByIndex(skillsIndex, row)
+    const skills = skillsValue
+      ? skillsValue.split(/[,;]/).map(s => s.trim()).filter(s => s)
+      : []
+
+    // Build standard founder object
+    const founder: ParsedFounder = {
+      name: row[nameIndex].trim(),
+      email: getValueByIndex(getIndex('email'), row),
+      linkedIn: getValueByIndex(getIndex('linkedIn'), row),
+      title: getValueByIndex(getIndex('title'), row),
+      education: getValueByIndex(getIndex('education'), row),
+      experience: getValueByIndex(getIndex('experience'), row),
+      bio: getValueByIndex(getIndex('bio'), row),
+      location: getValueByIndex(getIndex('location'), row),
+      twitter: getValueByIndex(getIndex('twitter'), row),
+      github: getValueByIndex(getIndex('github'), row),
+      website: getValueByIndex(getIndex('website'), row),
+      skills,
+      companyName: getValueByIndex(getIndex('companyName'), row),
+      role: getValueByIndex(getIndex('role'), row),
+    }
+
+    // Build custom data from unmapped columns
+    const customData: CustomData = {}
+
+    for (const [csvHeader, suggestion] of unmappedMappings) {
+      const colIndex = headerIndex[csvHeader]
+      if (colIndex === undefined) continue
+
+      const rawValue = row[colIndex]?.trim()
+      if (!rawValue) continue
+
+      const categoryKey = suggestion.suggestedCategory
+      const fieldKey = suggestion.suggestedField
+
+      if (!customData[categoryKey]) {
+        customData[categoryKey] = {}
+      }
+
+      // Parse value based on type
+      const fieldSchema = customSchema[categoryKey]?.fields[fieldKey]
+      let parsedValue: unknown = rawValue
+
+      if (fieldSchema?.dataType === 'number') {
+        const cleaned = rawValue.replace(/[%,$\s]/g, '')
+        const num = parseFloat(cleaned)
+        parsedValue = isNaN(num) ? rawValue : num
+      } else if (fieldSchema?.dataType === 'boolean') {
+        parsedValue = /^(true|yes|1)$/i.test(rawValue)
+      }
+
+      customData[categoryKey][fieldKey] = parsedValue
+    }
+
+    results.push({
+      founder,
+      customData: Object.keys(customData).length > 0 ? customData : {},
+      customSchema: Object.keys(customSchema).length > 0 ? customSchema : {},
+    })
+  }
+
+  console.log(`[Founder Parser] Parsed ${results.length} founders with custom data`)
+  return results
 }

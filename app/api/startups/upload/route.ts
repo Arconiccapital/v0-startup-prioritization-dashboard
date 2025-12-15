@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         score: startup.score,
         rank: startup.rank,
         feedback: startup.feedback || [],
-        pipelineStage: startup.pipelineStage || "Deal Flow",
+        pipelineStage: startup.pipelineStage || "Screening",
         aiScores: startup.aiScores || null,
         rationale: startup.rationale || null,
         detailedMetrics: startup.detailedMetrics || null,

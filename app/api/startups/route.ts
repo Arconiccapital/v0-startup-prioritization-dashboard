@@ -170,6 +170,9 @@ function sanitizeStartupData(data: any) {
     "investmentScorecard",
     "documents",
     "userId",
+    // Custom data fields from CSV import with unmapped columns
+    "customData",
+    "customSchema",
   ]
 
   // Filter out any fields not in the schema

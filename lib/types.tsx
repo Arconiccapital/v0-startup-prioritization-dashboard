@@ -50,14 +50,223 @@ export interface InvestmentScorecard {
 // </CHANGE>
 
 export type PipelineStage =
-  | "Deal Flow"
-  | "Shortlist"
-  | "Intro Sent"
+  | "Screening"
   | "First Meeting"
-  | "Due Diligence"
-  | "Partner Review"
-  | "Term Sheet"
-  | "Closed"
+  | "IC1"
+  | "DD"
+  | "IC2"
+  | "Closing"
+  | "Portfolio"
+
+// Stage metadata for display and progression
+export const PIPELINE_STAGES: { id: PipelineStage; label: string; description: string }[] = [
+  { id: "Screening", label: "Screening", description: "Initial review and outreach" },
+  { id: "First Meeting", label: "First Meeting", description: "Initial pitch and assessment" },
+  { id: "IC1", label: "IC1", description: "First Investment Committee review" },
+  { id: "DD", label: "Due Diligence", description: "Deep dive analysis" },
+  { id: "IC2", label: "IC2 / Decision", description: "Final Investment Committee decision" },
+  { id: "Closing", label: "Closing", description: "Term sheet and legal" },
+  { id: "Portfolio", label: "Portfolio", description: "Active portfolio company" },
+]
+
+// Tabs that are always visible regardless of stage
+export const PERSISTENT_TABS = ["overview", "documents", "outreach"]
+
+// Map stages to their available tabs (stage-specific + persistent)
+export const STAGE_TABS: Record<PipelineStage, string[]> = {
+  "Screening": ["overview", "documents", "outreach"],
+  "First Meeting": ["overview", "assessment", "documents", "outreach"],
+  "IC1": ["overview", "assessment", "scorecard", "rejection", "documents", "outreach"],
+  "DD": ["overview", "assessment", "scorecard", "issues", "valuation", "legal", "documents", "outreach"],
+  "IC2": ["overview", "assessment", "scorecard", "issues", "valuation", "legal", "decision", "rejection", "documents", "outreach"],
+  "Closing": ["overview", "scorecard", "issues", "valuation", "legal", "decision", "rejection", "documents", "outreach"],
+  "Portfolio": ["overview", "scorecard", "issues", "valuation", "legal", "decision", "rejection", "documents", "outreach"],
+}
+
+// Investment Decision Types
+export type InvestmentVote = "invest" | "pass" | "abstain"
+export type InvestmentDecisionStatus = "invest" | "pass" | "more_info" | "pending"
+
+export interface DecisionCategory {
+  score: number // 1-10
+  rationale: string
+}
+
+export interface InvestmentVoteRecord {
+  name: string
+  vote: InvestmentVote
+  rationale?: string
+  timestamp?: string
+}
+
+export interface InvestmentDecision {
+  decision: InvestmentDecisionStatus
+  decisionDate?: string
+  votes: InvestmentVoteRecord[]
+  categories: {
+    team: DecisionCategory
+    market: DecisionCategory
+    product: DecisionCategory
+    traction: DecisionCategory
+    competition: DecisionCategory
+    dealTerms: DecisionCategory
+  }
+  reasonsToInvest: string[]
+  reasonsNotToInvest: string[]
+  additionalContext: string
+  nextSteps?: string
+}
+
+export const DECISION_CATEGORIES = [
+  { key: "team", label: "Team & Founders", description: "Quality, experience, and execution capability of the team" },
+  { key: "market", label: "Market Opportunity", description: "Size, growth potential, and timing of the market" },
+  { key: "product", label: "Product & Technology", description: "Innovation, differentiation, and technical moat" },
+  { key: "traction", label: "Traction & Metrics", description: "Revenue, growth, unit economics, and customer validation" },
+  { key: "competition", label: "Competitive Position", description: "Defensibility, barriers to entry, and market dynamics" },
+  { key: "dealTerms", label: "Deal Terms & Valuation", description: "Valuation, terms, ownership, and investment fit" },
+] as const
+
+// =====================================
+// VALUATION & TERMS TYPES
+// =====================================
+
+export interface ComparableCompany {
+  name: string
+  valuation: number | null
+  multiple: string
+  notes: string
+}
+
+export interface ValuationSection {
+  proposedPreMoney: number | null
+  proposedPostMoney: number | null
+  askingValuation: number | null
+  ourOffer: number | null
+  comparableCompanies: ComparableCompany[]
+  valuationNotes: string
+}
+
+export interface FinancialsSection {
+  currentARR: number | null
+  currentMRR: number | null
+  runway: number | null           // months
+  burnRate: number | null         // monthly
+  grossMargin: number | null      // percentage
+  lastRoundValuation: number | null
+  lastRoundDate: string | null
+  totalRaised: number | null
+  revenueGrowthRate: number | null
+  financialNotes: string
+}
+
+export type TermSheetStatus = "Not Started" | "Draft" | "Sent" | "Negotiating" | "Signed" | "Declined"
+
+export interface TermSheetSection {
+  roundSize: number | null
+  ourAllocation: number | null
+  ownershipTarget: number | null  // percentage
+  proRataRights: boolean
+  boardSeat: boolean
+  boardObserver: boolean
+  liquidationPreference: string   // "1x non-participating", "1x participating", "2x", etc.
+  antiDilution: string            // "Broad-based weighted average", "Full ratchet", "None"
+  dividends: string
+  votingRights: string
+  protectiveProvisions: string[]
+  otherTerms: string
+  termSheetStatus: TermSheetStatus
+  termSheetNotes: string
+}
+
+export interface ValuationData {
+  valuation: ValuationSection
+  financials: FinancialsSection
+  termSheet: TermSheetSection
+  lastUpdated: string
+}
+
+// =====================================
+// LEGAL DILIGENCE TYPES
+// =====================================
+
+export type ChecklistItemStatus = "Not Started" | "Pending" | "In Progress" | "Done" | "Issue" | "N/A"
+
+export interface ChecklistItem {
+  status: ChecklistItemStatus
+  notes: string
+  owner?: string
+  documentUrl?: string
+}
+
+export interface LegalChecklistCorporate {
+  certificateOfIncorporation: ChecklistItem
+  bylaws: ChecklistItem
+  boardMinutes: ChecklistItem
+  shareholderAgreements: ChecklistItem
+  capTable: ChecklistItem
+  stockOptionPlan: ChecklistItem
+}
+
+export interface LegalChecklistIP {
+  patents: ChecklistItem
+  trademarks: ChecklistItem
+  copyrights: ChecklistItem
+  ipAssignments: ChecklistItem
+  openSourceCompliance: ChecklistItem
+}
+
+export interface LegalChecklistContracts {
+  customerContracts: ChecklistItem
+  vendorContracts: ChecklistItem
+  partnershipAgreements: ChecklistItem
+  leases: ChecklistItem
+}
+
+export interface LegalChecklistEmployment {
+  employmentAgreements: ChecklistItem
+  contractorAgreements: ChecklistItem
+  ndas: ChecklistItem
+  nonCompetes: ChecklistItem
+  benefitsPlans: ChecklistItem
+}
+
+export interface LegalChecklistCompliance {
+  regulatoryFilings: ChecklistItem
+  dataPrivacy: ChecklistItem
+  litigation: ChecklistItem
+  insurancePolicies: ChecklistItem
+}
+
+export interface LegalChecklist {
+  corporateDocs: LegalChecklistCorporate
+  ip: LegalChecklistIP
+  contracts: LegalChecklistContracts
+  employment: LegalChecklistEmployment
+  compliance: LegalChecklistCompliance
+}
+
+export type LegalIssueSeverity = "Critical" | "High" | "Medium" | "Low"
+export type LegalIssueStatus = "Open" | "Resolved" | "Accepted"
+export type LegalOverallStatus = "Not Started" | "In Progress" | "Issues Found" | "Clear" | "Waived"
+
+export interface LegalIssue {
+  id: string
+  category: string
+  issue: string
+  severity: LegalIssueSeverity
+  status: LegalIssueStatus
+  notes: string
+  identifiedDate: string
+}
+
+export interface LegalDiligenceData {
+  checklist: LegalChecklist
+  issues: LegalIssue[]
+  overallStatus: LegalOverallStatus
+  counselName: string
+  counselNotes: string
+  lastUpdated: string
+}
 
 // CSV Upload Types
 export interface CSVPreview {
@@ -515,3 +724,95 @@ export interface FounderDuplicateMatch {
   matchType: 'exact_linkedin' | 'exact_email' | 'name_match'
   confidence: number // 0-100
 }
+
+// =====================================
+// LLM-POWERED CSV COLUMN MAPPING TYPES
+// =====================================
+
+// Field schema for custom/dynamic data (stored per-startup)
+export interface CustomFieldSchema {
+  displayName: string
+  dataType: 'text' | 'number' | 'date' | 'url' | 'boolean'
+  description?: string
+  originalCsvHeader?: string // Track which CSV column this came from
+}
+
+// Category schema containing multiple fields
+export interface CustomCategorySchema {
+  displayName: string
+  sortOrder: number
+  icon?: string // Lucide icon name (optional)
+  fields: Record<string, CustomFieldSchema>
+}
+
+// Full custom schema structure (maps category keys to their schemas)
+export type CustomSchema = Record<string, CustomCategorySchema>
+
+// Custom data structure (maps category keys to field key-value pairs)
+export type CustomData = Record<string, Record<string, unknown>>
+
+// Individual field mapping suggestion from LLM
+export interface LLMMappingSuggestion {
+  csvHeader: string           // Original CSV column header
+  suggestedCategory: string   // Category key (e.g., "companyInfo", "customFinancials")
+  suggestedField: string      // Field key within the category
+  categoryType: 'existing' | 'new'  // Whether this maps to predefined or new category
+  confidence: number          // 0-100 confidence score
+  reasoning: string           // Short explanation of why this mapping was chosen
+  alternativeCategories?: string[]  // Other possible category matches
+  sampleValue?: string        // Sample value from CSV for context
+}
+
+// New category suggestion from LLM (when data doesn't fit existing categories)
+export interface NewCategorySuggestion {
+  name: string                // Key name (e.g., "financialMetrics")
+  displayName: string         // Display name (e.g., "Financial Metrics")
+  fieldType: CustomFieldSchema['dataType']
+  parentSection?: string      // Optional grouping hint
+  description?: string        // What this category captures
+}
+
+// Request payload for /api/csv-analyze
+export interface LLMAnalyzeRequest {
+  headers: string[]           // All CSV column headers
+  sampleRows: string[][]      // 3-5 sample rows of data
+  existingCategories: string[] // Current predefined category names
+  userContext?: string        // Optional user feedback for re-analysis
+  preserveMappings?: Record<string, { category: string; field: string }> // User-edited mappings to preserve
+}
+
+// Response from /api/csv-analyze
+export interface LLMAnalyzeResponse {
+  mappings: LLMMappingSuggestion[]
+  newCategorySuggestions?: NewCategorySuggestion[]
+  analysisNotes?: string      // Overall notes/observations about the CSV
+  confidence: number          // Overall confidence in the analysis (0-100)
+}
+
+// User-editable mapping state (used in UI)
+export interface EditableMappingState {
+  csvHeader: string
+  category: string            // Selected category (may differ from LLM suggestion)
+  field: string               // Selected field name
+  isNewCategory: boolean      // Whether user is creating a new category
+  isNewField: boolean         // Whether user is creating a new field
+  dataType: CustomFieldSchema['dataType']
+  skip: boolean               // Whether to skip this column entirely
+  llmSuggestion?: LLMMappingSuggestion  // Original LLM suggestion for reference
+}
+
+// Predefined categories that exist in the Startup model
+export const PREDEFINED_CATEGORIES = [
+  { key: 'companyInfo', displayName: 'Company Info', icon: 'Building2' },
+  { key: 'teamInfo', displayName: 'Team Info', icon: 'Users' },
+  { key: 'marketInfo', displayName: 'Market Info', icon: 'TrendingUp' },
+  { key: 'salesInfo', displayName: 'Sales Info', icon: 'DollarSign' },
+  { key: 'productInfo', displayName: 'Product Info', icon: 'Package' },
+  { key: 'businessModel', displayName: 'Business Model', icon: 'PieChart' },
+  { key: 'competitiveInfo', displayName: 'Competitive Info', icon: 'Target' },
+  { key: 'riskOpportunity', displayName: 'Risk & Opportunity', icon: 'AlertTriangle' },
+  { key: 'metrics', displayName: 'Metrics', icon: 'BarChart2' },
+  { key: 'aiScores', displayName: 'AI Scores', icon: 'Brain' },
+] as const
+
+export type PredefinedCategoryKey = typeof PREDEFINED_CATEGORIES[number]['key']

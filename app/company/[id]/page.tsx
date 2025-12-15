@@ -14,11 +14,20 @@ import type { OutreachMessages, OutreachTone } from "@/lib/outreach-generator"
 import { getStartupById } from "@/lib/startup-storage"
 import { InvestmentMemoDialog } from "@/components/investment-memo-dialog"
 import type { PipelineStage, ThresholdIssue } from "@/lib/types"
+import { STAGE_TABS, PIPELINE_STAGES } from "@/lib/types"
+import type { InvestmentDecision, ValuationData, LegalDiligenceData } from "@/lib/types"
+import { StageNavigation } from "@/components/stage-navigation"
+import { InvestmentDecisionComponent } from "@/components/investment-decision"
+import { ValuationTermsComponent } from "@/components/valuation-terms"
+import { LegalDiligenceComponent } from "@/components/legal-diligence"
+import { RejectionEmailsComponent } from "@/components/rejection-emails"
 import { SCORECARD_TEMPLATE } from "@/lib/scorecard-template"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DynamicDataSection } from "@/components/dynamic-data-section"
+import type { CustomData, CustomSchema } from "@/lib/types"
 
 export default function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -77,7 +86,7 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
     }
   }, [id])
 
-  const [currentStage, setCurrentStage] = useState<PipelineStage>(startup?.pipelineStage || "Deal Flow")
+  const [currentStage, setCurrentStage] = useState<PipelineStage>(startup?.pipelineStage || "Screening")
 
   // State for initial assessment
   const [assessment, setAssessment] = useState({
@@ -932,20 +941,20 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
   // Get stage-specific messaging
   const getStageMessage = (stage: PipelineStage) => {
     switch (stage) {
-      case "Deal Flow":
-        return "" // Removed "Initial screening in progress" message
-      case "Intro Sent":
-        return "" // Removed "Awaiting response from founder" message
+      case "Screening":
+        return "Initial review and outreach"
       case "First Meeting":
-        return "You can now generate investment memos"
-      case "Due Diligence":
+        return "You can now add meeting notes and generate memos"
+      case "IC1":
+        return "Prepare materials for first IC review"
+      case "DD":
         return "Conducting detailed due diligence"
-      case "Partner Review":
-        return "Under partner committee review"
-      case "Term Sheet":
+      case "IC2":
+        return "Final decision pending"
+      case "Closing":
         return "Negotiating investment terms"
-      case "Closed":
-        return "Investment completed"
+      case "Portfolio":
+        return "Active portfolio company"
       default:
         return ""
     }
@@ -953,18 +962,18 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
   const getStageAction = (stage: PipelineStage) => {
     switch (stage) {
-      case "Deal Flow":
-        return { label: "Send Introduction", action: moveToNextStage }
-      case "Intro Sent":
+      case "Screening":
         return { label: "Schedule First Meeting", action: moveToNextStage }
       case "First Meeting":
+        return { label: "Submit to IC1", action: moveToNextStage }
+      case "IC1":
         return { label: "Begin Due Diligence", action: moveToNextStage }
-      case "Due Diligence":
-        return { label: "Submit to Partners", action: moveToNextStage }
-      case "Partner Review":
-        return { label: "Prepare Term Sheet", action: moveToNextStage }
-      case "Term Sheet":
-        return { label: "Finalize Investment", action: moveToNextStage }
+      case "DD":
+        return { label: "Submit to IC2", action: moveToNextStage }
+      case "IC2":
+        return { label: "Begin Closing", action: moveToNextStage }
+      case "Closing":
+        return { label: "Add to Portfolio", action: moveToNextStage }
       default:
         return null
     }
@@ -972,13 +981,13 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
 
   const moveToNextStage = () => {
     const stages: PipelineStage[] = [
-      "Deal Flow",
-      "Intro Sent",
+      "Screening",
       "First Meeting",
-      "Due Diligence",
-      "Partner Review",
-      "Term Sheet",
-      "Closed",
+      "IC1",
+      "DD",
+      "IC2",
+      "Closing",
+      "Portfolio",
     ]
 
     const currentIndex = stages.indexOf(currentStage)
@@ -1173,13 +1182,50 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
           </div>
         </Card>
 
+        {/* Stage Navigation */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Pipeline Stage</h3>
+            <Badge variant="outline" className="text-xs">
+              {PIPELINE_STAGES.find(s => s.id === currentStage)?.description}
+            </Badge>
+          </div>
+          <StageNavigation
+            currentStage={currentStage}
+            onStageChange={(stage) => setCurrentStage(stage)}
+          />
+        </Card>
+
         {/* Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-muted p-1">
+          <TabsList className="bg-muted p-1 flex-wrap h-auto gap-1">
+            {/* Always visible */}
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="assessment">Initial Assessment</TabsTrigger>
-            <TabsTrigger value="scorecard">Investment Scorecard</TabsTrigger>
-            <TabsTrigger value="issues">Threshold Issues</TabsTrigger>
+
+            {/* Stage-specific tabs - only rendered when available */}
+            {STAGE_TABS[currentStage]?.includes("assessment") && (
+              <TabsTrigger value="assessment">Initial Assessment</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("scorecard") && (
+              <TabsTrigger value="scorecard">Investment Scorecard</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("issues") && (
+              <TabsTrigger value="issues">Threshold Issues</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("valuation") && (
+              <TabsTrigger value="valuation">Valuation & Terms</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("legal") && (
+              <TabsTrigger value="legal">Legal DD</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("decision") && (
+              <TabsTrigger value="decision">IC Decision</TabsTrigger>
+            )}
+            {STAGE_TABS[currentStage]?.includes("rejection") && (
+              <TabsTrigger value="rejection">Rejection</TabsTrigger>
+            )}
+
+            {/* Always visible */}
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="outreach">Outreach</TabsTrigger>
           </TabsList>
@@ -1772,6 +1818,23 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                 />
               </div>
             </Card>
+
+            {/* Custom Data Section - Dynamic fields from CSV import */}
+            {startup.customSchema && startup.customData && (
+              <DynamicDataSection
+                data={startup.customData as CustomData}
+                schema={startup.customSchema as CustomSchema}
+                isEditing={isEditingOverview}
+                onUpdate={(newData) => {
+                  // Update will be handled by save overview
+                  setEditableData((prev) => ({
+                    ...prev,
+                    customData: newData,
+                  }))
+                }}
+                className="mt-6"
+              />
+            )}
           </TabsContent>
 
           {/* Initial Assessment Tab */}
@@ -2550,6 +2613,80 @@ export default function CompanyPage({ params }: { params: Promise<{ id: string }
                 )}
               </div>
             </Card>
+          </TabsContent>
+
+          {/* Valuation & Terms Tab */}
+          <TabsContent value="valuation">
+            <ValuationTermsComponent
+              data={startup?.valuationData as ValuationData | undefined}
+              onSave={async (valuationData) => {
+                try {
+                  const response = await fetch(`/api/startups/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ valuationData }),
+                  })
+                  if (!response.ok) throw new Error("Failed to save valuation data")
+                  const updatedStartup = await response.json()
+                  setStartup(updatedStartup)
+                } catch (error) {
+                  console.error("Error saving valuation data:", error)
+                  alert("Failed to save valuation data")
+                }
+              }}
+            />
+          </TabsContent>
+
+          {/* Legal Diligence Tab */}
+          <TabsContent value="legal">
+            <LegalDiligenceComponent
+              data={startup?.legalDiligence as LegalDiligenceData | undefined}
+              startupId={id}
+              onSave={async (legalData) => {
+                try {
+                  const response = await fetch(`/api/startups/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ legalDiligence: legalData }),
+                  })
+                  if (!response.ok) throw new Error("Failed to save legal diligence data")
+                  const updatedStartup = await response.json()
+                  setStartup(updatedStartup)
+                } catch (error) {
+                  console.error("Error saving legal diligence data:", error)
+                  alert("Failed to save legal diligence data")
+                }
+              }}
+            />
+          </TabsContent>
+
+          {/* Investment Decision Tab */}
+          <TabsContent value="decision">
+            <InvestmentDecisionComponent
+              decision={startup?.investmentDecision as InvestmentDecision | undefined}
+              companyName={startup?.name || ""}
+              onSave={async (decisionData) => {
+                try {
+                  const response = await fetch(`/api/startups/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ investmentDecision: decisionData }),
+                  })
+                  if (!response.ok) throw new Error("Failed to save decision")
+                  // Refresh the startup data
+                  const updatedStartup = await response.json()
+                  setStartup(updatedStartup)
+                } catch (error) {
+                  console.error("Error saving investment decision:", error)
+                  alert("Failed to save investment decision")
+                }
+              }}
+            />
+          </TabsContent>
+
+          {/* Rejection Emails Tab */}
+          <TabsContent value="rejection">
+            <RejectionEmailsComponent startup={startup!} />
           </TabsContent>
 
           {/* Documents Tab */}

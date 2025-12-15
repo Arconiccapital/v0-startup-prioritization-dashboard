@@ -4,20 +4,10 @@ import type React from "react"
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import type { Founder, PipelineStage } from "@/lib/types"
+import { PIPELINE_STAGES } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Briefcase, Database, FileText } from "lucide-react"
-
-const PIPELINE_STAGES: PipelineStage[] = [
-  "Deal Flow",
-  "Shortlist",
-  "Intro Sent",
-  "First Meeting",
-  "Due Diligence",
-  "Partner Review",
-  "Term Sheet",
-  "Closed",
-]
 
 // Extended Founder type with source marker
 interface FounderWithSource extends Founder {
@@ -41,22 +31,21 @@ export function FounderKanbanBoard({
   const router = useRouter()
   const [draggedFounder, setDraggedFounder] = useState<string | null>(null)
 
-  // Memoize founders by stage to avoid filtering 8 times on every render
+  // Memoize founders by stage to avoid filtering on every render
   const foundersByStage = useMemo(() => {
     const result: Record<PipelineStage, FounderWithSource[]> = {
-      "Deal Flow": [],
-      "Shortlist": [],
-      "Intro Sent": [],
+      "Screening": [],
       "First Meeting": [],
-      "Due Diligence": [],
-      "Partner Review": [],
-      "Term Sheet": [],
-      "Closed": [],
+      "IC1": [],
+      "DD": [],
+      "IC2": [],
+      "Closing": [],
+      "Portfolio": [],
     }
 
-    // Single pass through founders instead of 8 separate filter operations
+    // Single pass through founders
     founders.forEach((founder) => {
-      const stage = (founder.pipelineStage || "Deal Flow") as PipelineStage
+      const stage = (founder.pipelineStage || "Screening") as PipelineStage
       if (result[stage]) {
         result[stage].push(founder)
       }
@@ -104,24 +93,24 @@ export function FounderKanbanBoard({
   return (
     <div className="h-full overflow-x-auto p-6">
       <div className="flex gap-4 h-full min-w-max">
-        {PIPELINE_STAGES.map((stage) => {
-          const stageFounders = getFoundersByStage(stage)
+        {PIPELINE_STAGES.map((stageInfo) => {
+          const stageFounders = getFoundersByStage(stageInfo.id)
           return (
             <div
-              key={stage}
+              key={stageInfo.id}
               className="flex-shrink-0 w-80 flex flex-col"
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(stage)}
+              onDrop={() => handleDrop(stageInfo.id)}
             >
               <div
                 className="bg-muted p-3 mb-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                onClick={() => onViewStage(stage)}
+                onClick={() => onViewStage(stageInfo.id)}
               >
                 <h3 className="font-semibold text-sm">
-                  {stage}
+                  {stageInfo.label}
                   <span className="ml-2 text-muted-foreground">({stageFounders.length})</span>
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">Click to view all</p>
+                <p className="text-xs text-muted-foreground mt-1">{stageInfo.description}</p>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto">
